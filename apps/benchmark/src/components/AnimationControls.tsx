@@ -61,6 +61,17 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
     setSkins(skinNames);
     const activeSkin = spineInstance.skeleton.skin?.name || skinNames[0] || '';
     setCurrentSkin(activeSkin);
+
+    // Ensure a skin is actually applied to the skeleton.
+    // Without this, skeletons that rely on non-default skins for their
+    // attachments will render broken (invisible or missing parts).
+    if (!spineInstance.skeleton.skin && skinNames.length > 0) {
+      const initialSkin = spineInstance.skeleton.data.findSkin(skinNames[0]);
+      if (initialSkin) {
+        spineInstance.skeleton.setSkin(initialSkin);
+        spineInstance.skeleton.setSlotsToSetupPose();
+      }
+    }
   }, [spineInstance]);
 
   // Keep UI controls synchronized with external Spine state changes.
