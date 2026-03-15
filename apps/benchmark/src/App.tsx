@@ -22,6 +22,8 @@ import { tIndexed } from './utils/indexedMessage';
 import { FileProcessor } from './core/utils/fileProcessor';
 import { fetchRemoteAssetBundleFiles } from './utils/remoteAssetBundle';
 import {
+  ChevronLeft,
+  ChevronRight,
   FolderOpen,
   Gauge,
   Languages,
@@ -185,6 +187,7 @@ const App: React.FC = () => {
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('language');
   const [routeSelection, setRouteSelection] = useState<RouteSelectionState>(DEFAULT_ROUTE_SELECTION);
   const [lastLoadError, setLastLoadError] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useSafeLocalStorage('spine-benchmark-sidebar-collapsed', false);
   const migratedLegacyBackgroundRef = useRef(false);
 
   const { addToast } = useToast();
@@ -784,13 +787,21 @@ const App: React.FC = () => {
 
   return (
     <WorkbenchProvider value={workbenchContextValue}>
-    <div className="app-shell">
-      <aside className="app-sidebar">
+    <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <aside className={`app-sidebar${sidebarCollapsed ? ' collapsed' : ''}`}>
         <div className="sidebar-header">
           <Link to="/tools/benchmark" className="sidebar-brand" aria-label={t('dashboard.tools.benchmark')}>
             <img src={benchmarkBrandIcon} alt="" className="sidebar-brand-icon" />
             <span className="sidebar-brand-text">{t('dashboard.tools.benchmark')}</span>
           </Link>
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
         </div>
 
         <section className="sidebar-section" data-tour="tool-switcher">

@@ -347,11 +347,63 @@ body {
 }
 
 
+/* ── Collapsible Sidebar ──────────────────────────────────────────── */
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+
+.app-sidebar.collapsed {
+  width: 52px;
+  padding: 16px 8px;
+  overflow: visible;
+}
+
+.app-sidebar.collapsed .sidebar-section,
+.app-sidebar.collapsed .sidebar-outreach,
+.app-sidebar.collapsed .sidebar-tour-btn {
+  display: none;
+}
+
+.app-sidebar.collapsed .sidebar-brand-text {
+  display: none;
+}
+
+.app-sidebar.collapsed .sidebar-header {
+  justify-content: center;
+}
+
+.sidebar-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--sb-border);
+  border-radius: 50%;
+  background: var(--sb-bg-2);
+  color: var(--sb-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--sb-duration) var(--sb-ease),
+              color var(--sb-duration) var(--sb-ease),
+              border-color var(--sb-duration) var(--sb-ease);
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--sb-bg-3);
+  color: var(--sb-text);
+  border-color: var(--sb-border-strong);
+}
+
 /* Sidebar header */
 .sidebar-header {
   position: relative;
   padding: 0;
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .sidebar-logo {
@@ -5403,6 +5455,10 @@ select:focus,
     grid-template-columns: 250px minmax(0, 1fr);
   }
 
+  .app-shell.sidebar-collapsed {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
   .tool-route-inline {
     left: calc(250px + (100vw - 250px) / 2);
   }
@@ -5758,7 +5814,7 @@ select:focus,
 .route-workspace > .physics-baker-layout,
 .route-workspace > .assets-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(320px, 2fr) minmax(200px, 1fr) minmax(200px, 1fr);
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "canvas panel panel";
   gap: 16px;
@@ -5769,7 +5825,7 @@ select:focus,
 .route-workspace > .mesh-inspector-layout.with-side-insight,
 .route-workspace > .dc-inspector-layout.with-side-insight,
 .route-workspace > .atlas-repack-layout.with-side-insight {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(320px, 2fr) minmax(200px, 1fr) minmax(200px, 1fr);
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "canvas panel info";
 }
@@ -5802,6 +5858,12 @@ select:focus,
   height: 100%;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
+}
+
+.route-workspace .tool-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .route-workspace > .benchmark-inspector-layout > .tool-canvas,
