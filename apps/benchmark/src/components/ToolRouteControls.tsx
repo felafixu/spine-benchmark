@@ -279,21 +279,6 @@ export const ToolRouteControls: React.FC<ToolRouteControlsProps> = ({
             <span>{triggerLabel || t('toolRouteControls.actions.openPicker')}</span>
           </button>
         </div>
-        <div className="tool-route-inline-meta">
-          <span className="tool-route-pill tool-route-pill-asset">
-            {minimal && (
-              <span className="tool-route-pill-icon" aria-hidden="true">
-                <RabbitIcon size={14} />
-              </span>
-            )}
-            <span className="tool-route-pill-label">
-              {selectedAsset ? selectedAsset.name : t('toolRouteControls.values.noAssets')}
-            </span>
-          </span>
-          <span className="tool-route-pill subtle tool-route-pill-meta">
-            <span className="tool-route-pill-label">{selectedAssetMeta}</span>
-          </span>
-        </div>
       </section>
 
       {isOpen && (

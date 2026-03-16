@@ -19,7 +19,7 @@ export function RouteHeaderCard({ title, subtitle, version = 'v1.2.0' }: RouteHe
     <header className="route-header-card">
       <div className="route-header-copy">
         <h2>{title}</h2>
-        <p>{subtitle}</p>
+        {/* <p>{subtitle}</p> */}
       </div>
       <div className="route-header-actions" aria-label={t('ui.routeUtilities')}>
         <button
@@ -31,12 +31,12 @@ export function RouteHeaderCard({ title, subtitle, version = 'v1.2.0' }: RouteHe
         >
           {languageLabel}
         </button>
-        <span className="route-header-chip route-header-chip-kbd">
+        {/* <span className="route-header-chip route-header-chip-kbd">
           {t('ui.shortcuts.commandPalette')}
         </span>
         <span className="route-header-chip route-header-chip-version">
           {version}
-        </span>
+        </span> */}
       </div>
     </header>
   );

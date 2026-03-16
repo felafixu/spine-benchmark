@@ -1,12 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkbench } from '../workbench/WorkbenchContext';
 import { ToolRouteControls } from '../components/ToolRouteControls';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
 import { RouteStateCallout } from '../components/insights/MetricInsightTools';
-import { AnimationControls } from '../components/AnimationControls';
+import { ZSliceTimeline } from '../components/ZSliceTimeline';
 import { ThreeSliceViewer } from '../components/ThreeSliceViewer';
 import { useZSlice, SliceMode, BoneTreeNode } from '../hooks/useZSlice';
+import { usePrerender } from '../hooks/usePrerender';
 import { Lock, Unlock, ChevronRight, ChevronDown, Cpu, GitBranch, MousePointerClick } from 'lucide-react';
 
 /* ── Bone tree renderer for custom-lock mode ──────────────────────── */
@@ -113,6 +114,52 @@ export function ZSliceRouteView() {
     layerSpacing,
     setLayerSpacing,
   } = useZSlice(spineInstance);
+
+  /* ── Timeline + prerender state ────────────────────────────────── */
+  const [animationName, setAnimationName] = useState('');
+  const [skinName, setSkinName] = useState('');
+  const [currentFrame, setCurrentFrame] = useState(0);
+
+  const {
+    frames: prerenderFrames,
+    totalFrames,
+    status: prerenderStatus,
+    progress: prerenderProgress,
+    prerender,
+  } = usePrerender(spineInstance, layers);
+
+  // Stable fingerprint so prerender only re-triggers when layer IDs actually change
+  const layerFingerprint = useMemo(
+    () => layers.map((l) => l.id).join('|'),
+    [layers],
+  );
+
+  // Trigger prerender when animation, skin, or layer *structure* changes
+  // Uses layerFingerprint (string) instead of layers (object ref) to avoid
+  // re-triggering from DC polling that produces new arrays with same structure.
+  useEffect(() => {
+    if (animationName && spineInstance && layers.length > 0 && prerenderStatus !== 'prerendering') {
+      setCurrentFrame(0);
+      prerender(animationName, skinName);
+    }
+  }, [animationName, skinName, layerFingerprint, spineInstance, prerender]);
+
+  // Compute skeleton size for Three.js planes
+  const skeletonSize = useMemo(() => {
+    if (!spineInstance) return { w: 6, h: 8 };
+    const bounds = spineInstance.getBounds();
+    if (bounds.width > 0 && bounds.height > 0) {
+      return {
+        w: Math.max(bounds.width / 100, 2),
+        h: Math.max(bounds.height / 100, 2),
+      };
+    }
+    const data = spineInstance.skeleton?.data;
+    return {
+      w: Math.max((data?.width ?? 400) / 100, 2),
+      h: Math.max((data?.height ?? 600) / 100, 2),
+    };
+  }, [spineInstance]);
 
   const handleLoadSelected = async () => {
     setIsLoadingSelected(true);
@@ -301,16 +348,30 @@ export function ZSliceRouteView() {
         >
           {spineInstance && (
             <div className="zslice-anim-controls">
-              <AnimationControls spineInstance={spineInstance} />
+              <ZSliceTimeline
+                spineInstance={spineInstance}
+                totalFrames={totalFrames}
+                currentFrame={currentFrame}
+                onFrameChange={setCurrentFrame}
+                prerenderStatus={prerenderStatus}
+                prerenderProgress={prerenderProgress}
+                onAnimationChange={setAnimationName}
+                onSkinChange={setSkinName}
+                animationName={animationName}
+                skinName={skinName}
+              />
             </div>
           )}
 
           <div className="zslice-canvas">
             {spineInstance ? (
               <ThreeSliceViewer
-                spine={spineInstance}
                 layers={layers}
                 layerSpacing={layerSpacing}
+                prerenderFrames={prerenderFrames}
+                currentFrame={currentFrame}
+                skeletonSize={skeletonSize}
+                reverseZOrder={mode !== 'draw-call'}
                 hoveredLayerId={hoveredLayerId}
                 isolatedLayerId={isolatedLayerId}
                 onHoverLayer={setHoveredLayerId}

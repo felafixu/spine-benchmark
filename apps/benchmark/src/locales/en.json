@@ -1540,6 +1540,12 @@
       "title": "Layers",
       "drawCalls": "Draw Calls"
     },
+    "timeline": {
+      "frame": "Frame",
+      "prerendering": "Prerendering slices...",
+      "ready": "Ready",
+      "scrub": "Scrub through animation frames"
+    },
     "empty": {
       "title": "Z-Slice Viewer",
       "hint": "Load a Spine asset to explore its layers in an exploded 3D view."

@@ -248,7 +248,7 @@ function sliceByCustomLock(tree: BoneTreeNode): SliceLayer[] {
 
 /* ── Hook ──────────────────────────────────────────────────────────── */
 
-const DC_POLL_MS = 100;
+const DC_POLL_MS = 250;
 
 export function useZSlice(spineInstance: Spine | null) {
   const [mode, setMode] = useState<SliceMode>('draw-call');
@@ -285,10 +285,13 @@ export function useZSlice(spineInstance: Spine | null) {
   // ── Live draw-call layers (polled via rAF) ───────────────────────
   const [dcLayers, setDcLayers] = useState<SliceLayer[]>([]);
   const lastDcPollRef = useRef(0);
+  /** Fingerprint of the previous DC layer structure to avoid React re-renders when nothing changed */
+  const prevDcFingerprintRef = useRef('');
 
   useEffect(() => {
     if (!spineInstance || mode !== 'draw-call') {
       setDcLayers([]);
+      prevDcFingerprintRef.current = '';
       return;
     }
 
@@ -302,7 +305,13 @@ export function useZSlice(spineInstance: Spine | null) {
         lastDcPollRef.current = now;
         try {
           const next = sliceByDrawCall(spineInstance);
-          setDcLayers(next);
+          // Build a structural fingerprint: "layerCount|id0:slotCount0|id1:slotCount1|..."
+          // Only update React state when this changes, avoiding massive mesh rebuilds
+          const fp = next.length + '|' + next.map(l => l.id + ':' + l.slots.length).join('|');
+          if (fp !== prevDcFingerprintRef.current) {
+            prevDcFingerprintRef.current = fp;
+            setDcLayers(next);
+          }
         } catch {
           // skeleton may not be ready
         }

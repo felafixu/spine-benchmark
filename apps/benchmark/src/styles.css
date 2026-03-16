@@ -5581,11 +5581,11 @@ select:focus,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 76px;
-  padding: 10px 20px;
-  border: 1px solid #e8e4df;
+  min-height: 24px;
+  /* padding: 10px 20px; */
+  /* border: 1px solid #e8e4df; */
   border-radius: 20px;
-  background: #ffffff;
+  /* background: #ffffff; */
 }
 
 .route-header-copy {

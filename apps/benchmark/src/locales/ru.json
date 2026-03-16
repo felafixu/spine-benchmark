@@ -1540,6 +1540,12 @@
       "title": "Слои",
       "drawCalls": "Draw Calls"
     },
+    "timeline": {
+      "frame": "Кадр",
+      "prerendering": "Пререндеринг слоёв...",
+      "ready": "Готово",
+      "scrub": "Перемотка кадров анимации"
+    },
     "empty": {
       "title": "Z-Срез",
       "hint": "Загрузите Spine ассет для просмотра слоёв в 3D."
