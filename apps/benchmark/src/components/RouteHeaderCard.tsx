@@ -8,7 +8,7 @@ interface RouteHeaderCardProps {
   version?: string;
 }
 
-export function RouteHeaderCard({ title, subtitle, version = 'v1.2.0' }: RouteHeaderCardProps) {
+export function RouteHeaderCard({ title, subtitle, version = 'v3.1.0' }: RouteHeaderCardProps) {
   const { t, i18n } = useTranslation();
   const languageLabel = t(`dashboard.languages.${i18n.language}`, { defaultValue: i18n.language.toUpperCase() });
   const handleLanguageClick = () => {

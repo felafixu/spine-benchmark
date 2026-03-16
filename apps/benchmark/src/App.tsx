@@ -944,7 +944,7 @@ const App: React.FC = () => {
       <CommandPalette />
 
       <VersionDisplay
-        appVersion="1.2.0"
+        appVersion="3.1.0"
         spineVersion="4.2.*"
       />
 
