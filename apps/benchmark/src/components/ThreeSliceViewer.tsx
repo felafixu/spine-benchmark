@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import type { Spine } from '@esotericsoftware/spine-pixi-v8';
 import type { SliceLayer } from '../hooks/useZSlice';
 import { getPixiApp } from '../hooks/usePixiApp';
-import { Matrix, Rectangle, RenderTexture } from 'pixi.js';
+import { Matrix, RenderTexture } from 'pixi.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
@@ -10,8 +10,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const BG_COLOR = 0x1a1a2e;
 const GRID_COLOR = 0x333355;
 const LABEL_FONT = '600 11px "Inter", system-ui, sans-serif';
-/** How many animation frames to skip between full texture recaptures */
-const CAPTURE_EVERY_N_FRAMES = 4;
 
 /* ── Helpers ───────────────────────────────────────────────────────── */
 
@@ -64,136 +62,116 @@ function createLayerOutline(
   return new THREE.Line(geometry, material);
 }
 
-/* ── Texture capture via PIXI ─────────────────────────────────────── */
+/* ── Per-layer texture cache entry ────────────────────────────────── */
 
 interface LayerCapture {
   canvas: HTMLCanvasElement;
   threeTex: THREE.CanvasTexture;
 }
 
+/* ── Incremental single-layer capture ─────────────────────────────── *
+ *
+ * Instead of capturing ALL layers in one frame (N render passes +
+ * N GPU read-backs ⇒ huge frame spike), we capture ONE layer per
+ * animation frame in round-robin order.  A full texture refresh
+ * therefore takes `layers.length` frames, but each individual frame
+ * only does 1 PIXI render + 1 readPixels, keeping the frame budget
+ * smooth.
+ *
+ * The RenderTexture and transform Matrix are created once and reused
+ * across all captures to avoid per-frame allocation / GC pressure.
+ * ------------------------------------------------------------------ */
+
+interface CaptureState {
+  /** Reusable RT sized to the full skeleton */
+  rt: RenderTexture;
+  /** Reusable affine transform */
+  transform: Matrix;
+  /** Current RT dimensions (to detect skeleton resize) */
+  rtW: number;
+  rtH: number;
+  /** Last known local-bounds origin */
+  lbX: number;
+  lbY: number;
+  /** Has enableRenderGroup been called once? */
+  rgReady: boolean;
+}
+
 /**
- * Capture each layer into its own canvas by temporarily nulling-out
- * the attachments of every slot that does NOT belong to the layer.
- *
- * Why attachment-nulling instead of slot.color.a?
- *   spine-pixi-v8's SpinePipe caches colour data in per-attachment
- *   objects and only recomputes them when `_stateChanged` is true
- *   (set exclusively by the animation system).  Changing slot.color.a
- *   externally never flips that flag ⇒ stale cache ⇒ every layer
- *   looks identical.  Setting attachment = null is picked up directly
- *   by addRenderable/updateRenderable (they skip null-attachment slots
- *   via an `instanceof` check), so no cache issue.
- *
- * Why slot names instead of draw-indices?
- *   Spine animations can include draw-order keys that rearrange the
- *   drawOrder array at runtime.  The indices stored in SliceSlotInfo
- *   are captured once at layer-creation time and may be stale.
- *   Matching by slot.data.name is animation-safe.
- *
- * Why a shared RenderTexture + explicit frame?
- *   extract.canvas({ target }) internally calls generateTexture which
- *   computes bounds from the container.  After we null-out most
- *   attachments the bounding box shrinks, producing a tiny texture
- *   that only covers the surviving slots.  Each layer would have
- *   different dimensions / origins and they would not stack correctly
- *   in the Three.js viewer.  By capturing the full-skeleton bounds
- *   BEFORE any modifications and rendering into a fixed-size RT we
- *   guarantee all layers share the same frame.
- *
- * Why `structureDidChange = true`?
- *   PixiJS 8's RenderGroupSystem caches the instruction set for each
- *   render group.  After the first render, subsequent renders reuse
- *   the cached instructions via `updateRenderable()` which only
- *   updates EXISTING batch elements — it does NOT remove slots that
- *   became null.  Setting structureDidChange forces a full rebuild
- *   via `addRenderable()` which re-walks drawOrder, skipping nulls.
+ * Capture exactly ONE layer, returning the layer ID that was captured
+ * (or null if nothing was captured).
  */
-function captureAllLayers(
+function captureOneLayer(
   spine: Spine,
-  layers: SliceLayer[],
+  layer: SliceLayer,
   cache: Map<string, LayerCapture>,
-): void {
+  state: CaptureState,
+): boolean {
   const app = getPixiApp();
-  if (!app || !spine.skeleton) return;
+  if (!app || !spine.skeleton) return false;
 
   const renderer = app.renderer;
   const skeleton = spine.skeleton;
   const drawOrder = skeleton.drawOrder;
-  if (drawOrder.length === 0) return;
+  if (drawOrder.length === 0) return false;
 
-  // ── 1. Snapshot full bounds BEFORE any attachment changes ────────
-  //    We need the bounds in spine's local coordinate space so the
-  //    translate transform in step 3 maps correctly.
+  // ── Ensure RT matches current skeleton bounds ──────────────────
   const lb = spine.getLocalBounds();
   const fw = Math.ceil(lb.width);
   const fh = Math.ceil(lb.height);
-  if (fw <= 0 || fh <= 0) return;
-  const frame = new Rectangle(lb.x, lb.y, fw, fh);
+  if (fw <= 0 || fh <= 0) return false;
 
-  // ── 2. Save every slot's current attachment (keyed by array index) ─
+  if (fw !== state.rtW || fh !== state.rtH) {
+    state.rt.resize(fw, fh);
+    state.rtW = fw;
+    state.rtH = fh;
+  }
+  state.lbX = lb.x;
+  state.lbY = lb.y;
+
+  // ── Save attachments ───────────────────────────────────────────
   const savedAttachments: (unknown | null)[] = new Array(drawOrder.length);
   for (let i = 0; i < drawOrder.length; i++) {
     savedAttachments[i] = drawOrder[i].attachment;
   }
 
-  // Create a reusable RenderTexture at full-skeleton size
-  const rt = RenderTexture.create({ width: fw, height: fh, resolution: 1 });
+  const visibleNames = new Set(layer.slots.map((s) => s.slotName));
 
-  for (const layer of layers) {
-    // Build a Set of slot NAMES that belong to this layer
-    const visibleNames = new Set(layer.slots.map((s) => s.slotName));
-
-    // ── 3. Null-out attachments for hidden slots ───────────────────
-    for (let i = 0; i < drawOrder.length; i++) {
-      const slot = drawOrder[i];
-      if (visibleNames.has(slot.data.name)) {
-        // Restore original attachment (may have been null'd by prev layer)
-        slot.attachment = savedAttachments[i] as any;
-      } else {
-        slot.attachment = null;
-      }
+  // ── Null-out hidden slots ──────────────────────────────────────
+  for (let i = 0; i < drawOrder.length; i++) {
+    const slot = drawOrder[i];
+    if (!visibleNames.has(slot.data.name)) {
+      slot.attachment = null;
     }
+  }
 
-    // ── 4. Force spine + render-group to fully rebuild ─────────────
-    spine.spineAttachmentsDirty = true;
-    // _stateChanged gates _validateAndTransformAttachments; without
-    // it the pipe skips the full validation/transform pass.
-    (spine as any)._stateChanged = true;
+  // ── Force spine + render-group to fully rebuild ────────────────
+  spine.spineAttachmentsDirty = true;
+  (spine as any)._stateChanged = true;
 
-    // Ensure spine has a render group (renderer.render will call
-    // enableRenderGroup anyway, but we need the ref now to set
-    // structureDidChange).
+  if (!state.rgReady) {
     if (typeof (spine as any).enableRenderGroup === 'function') {
       (spine as any).enableRenderGroup();
     }
-    const rg = (spine as any).renderGroup;
-    if (rg) {
-      rg.structureDidChange = true;
-    }
+    state.rgReady = true;
+  }
+  const rg = (spine as any).renderGroup;
+  if (rg) rg.structureDidChange = true;
 
-    // ── 5. Render spine into our fixed-size RT ─────────────────────
-    try {
-      const transform = new Matrix();
-      transform.translate(-frame.x, -frame.y);
-      renderer.render({
-        container: spine,
-        target: rt,
-        clear: true,
-        transform,
-      });
-    } catch {
-      continue;
-    }
+  // ── Render + extract ───────────────────────────────────────────
+  let ok = false;
+  try {
+    state.transform.identity();
+    state.transform.translate(-state.lbX, -state.lbY);
+    renderer.render({
+      container: spine,
+      target: state.rt,
+      clear: true,
+      transform: state.transform,
+    });
+    const captured = renderer.extract.canvas({ target: state.rt }) as HTMLCanvasElement;
 
-    // ── 6. Read back pixels from the RT into a canvas ──────────────
-    let captured: HTMLCanvasElement;
-    try {
-      captured = renderer.extract.canvas({ target: rt }) as HTMLCanvasElement;
-    } catch {
-      continue;
-    }
-
-    // ── 7. Copy into the Three.js texture cache ────────────────────
+    // Copy into Three.js texture cache
     const existing = cache.get(layer.id);
     if (existing) {
       const dstCtx = existing.canvas.getContext('2d');
@@ -216,20 +194,20 @@ function captureAllLayers(
       tex.colorSpace = THREE.SRGBColorSpace;
       cache.set(layer.id, { canvas: persistent, threeTex: tex });
     }
+    ok = true;
+  } catch {
+    // silently skip
   }
 
-  // ── 8. Restore all attachments + dirty flags for normal rendering ─
+  // ── Restore attachments ────────────────────────────────────────
   for (let i = 0; i < drawOrder.length; i++) {
     drawOrder[i].attachment = savedAttachments[i] as any;
   }
   spine.spineAttachmentsDirty = true;
   (spine as any)._stateChanged = true;
-  const rg = (spine as any).renderGroup;
-  if (rg) {
-    rg.structureDidChange = true;
-  }
+  if (rg) rg.structureDidChange = true;
 
-  rt.destroy(true);
+  return ok;
 }
 
 /* ── Component ─────────────────────────────────────────────────────── */
@@ -262,10 +240,14 @@ export function ThreeSliceViewer({
   const layerGroupsRef = useRef<Map<string, THREE.Group>>(new Map());
   const raycasterRef = useRef(new THREE.Raycaster());
   const mouseRef = useRef(new THREE.Vector2());
-  /** Per-layer captured texture cache (persistent across frames) */
+
+  /** Per-layer captured texture cache */
   const texCacheRef = useRef<Map<string, LayerCapture>>(new Map());
-  /** Frame counter to throttle captures */
-  const frameCtrRef = useRef(0);
+  /** Round-robin index – which layer to capture next */
+  const captureIdxRef = useRef(0);
+  /** Persistent capture state (RT, transform, etc.) */
+  const captureStateRef = useRef<CaptureState | null>(null);
+
   /** Reference to the current layer list (avoids stale closure) */
   const layersRef = useRef(layers);
   layersRef.current = layers;
@@ -339,33 +321,56 @@ export function ThreeSliceViewer({
     });
     observer.observe(container);
 
-    // Render loop (texture capture runs inside here)
+    // ── Render loop ────────────────────────────────────────────────
     function animate() {
       frameRef.current = requestAnimationFrame(animate);
-      frameCtrRef.current++;
       controls.update();
 
-      // Capture layer textures every N frames
       const sp = spineRef.current;
       const lrs = layersRef.current;
-      if (sp && lrs.length > 0 && frameCtrRef.current % CAPTURE_EVERY_N_FRAMES === 0) {
-        captureAllLayers(sp, lrs, texCacheRef.current);
 
-        // Update plane materials with captured textures
-        for (const [layerId, group] of layerGroupsRef.current) {
-          const cap = texCacheRef.current.get(layerId);
-          if (!cap) continue;
-          group.traverse((obj) => {
-            if ((obj as THREE.Mesh).isMesh && obj.userData?.isTexPlane) {
-              const mesh = obj as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
-              if (mesh.material.map !== cap.threeTex) {
-                mesh.material.map = cap.threeTex;
-                mesh.material.needsUpdate = true;
-              }
-              cap.threeTex.needsUpdate = true;
-            }
-          });
+      // Capture ONE layer per frame (round-robin)
+      if (sp && lrs.length > 0) {
+        // Lazily create capture state
+        if (!captureStateRef.current) {
+          captureStateRef.current = {
+            rt: RenderTexture.create({ width: 2, height: 2, resolution: 1 }),
+            transform: new Matrix(),
+            rtW: 2,
+            rtH: 2,
+            lbX: 0,
+            lbY: 0,
+            rgReady: false,
+          };
         }
+
+        // Clamp index
+        if (captureIdxRef.current >= lrs.length) {
+          captureIdxRef.current = 0;
+        }
+
+        const layer = lrs[captureIdxRef.current];
+        const ok = captureOneLayer(sp, layer, texCacheRef.current, captureStateRef.current);
+
+        if (ok) {
+          // Bind texture to the matching Three.js plane (once)
+          const group = layerGroupsRef.current.get(layer.id);
+          const cap = texCacheRef.current.get(layer.id);
+          if (group && cap) {
+            group.traverse((obj) => {
+              if ((obj as THREE.Mesh).isMesh && obj.userData?.isTexPlane) {
+                const mesh = obj as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+                if (mesh.material.map !== cap.threeTex) {
+                  mesh.material.map = cap.threeTex;
+                  mesh.material.needsUpdate = true;
+                }
+                cap.threeTex.needsUpdate = true;
+              }
+            });
+          }
+        }
+
+        captureIdxRef.current++;
       }
 
       renderer.render(scene, camera);
@@ -380,6 +385,11 @@ export function ThreeSliceViewer({
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
+      // Destroy persistent RT
+      if (captureStateRef.current) {
+        captureStateRef.current.rt.destroy(true);
+        captureStateRef.current = null;
+      }
     };
   }, []);
 
@@ -388,14 +398,13 @@ export function ThreeSliceViewer({
     const scene = sceneRef.current;
     if (!scene) return;
 
-    // Clean up old groups + old texture cache
+    // Clean up old groups
     for (const [, group] of layerGroupsRef.current) {
       scene.remove(group);
       group.traverse((obj) => {
         if ((obj as any).geometry) (obj as any).geometry.dispose();
         if ((obj as any).material) {
           const mat = (obj as any).material;
-          // Don't dispose shared captured textures here – cache owns them
           if (mat.map && !mat.userData?.isCapture) mat.map.dispose();
           mat.dispose();
         }
@@ -403,7 +412,7 @@ export function ThreeSliceViewer({
     }
     layerGroupsRef.current.clear();
 
-    // Dispose old texture cache entries that no longer match a layer
+    // Dispose stale texture cache entries
     const currentLayerIds = new Set(layers.map((l) => l.id));
     for (const [id, cap] of texCacheRef.current) {
       if (!currentLayerIds.has(id)) {
@@ -411,6 +420,9 @@ export function ThreeSliceViewer({
         texCacheRef.current.delete(id);
       }
     }
+
+    // Reset round-robin so new layers get captured immediately
+    captureIdxRef.current = 0;
 
     if (layers.length === 0) return;
 
@@ -426,7 +438,7 @@ export function ThreeSliceViewer({
       // stack so the camera looks down through foreground → background.
       const z = startZ + (layers.length - 1 - i) * spacing;
 
-      // Textured plane (starts transparent white; texture filled by capture loop)
+      // Textured plane
       const geo = new THREE.PlaneGeometry(w, h);
       const existingCap = texCacheRef.current.get(layer.id);
       const mat = new THREE.MeshBasicMaterial({
@@ -442,7 +454,7 @@ export function ThreeSliceViewer({
       texPlane.userData = { layerId: layer.id, isTexPlane: true };
       group.add(texPlane);
 
-      // Fallback tinted plane behind the texture (visible until first capture)
+      // Fallback tinted plane behind the texture
       const fallbackGeo = new THREE.PlaneGeometry(w, h);
       const fallbackMat = new THREE.MeshBasicMaterial({
         color: hexToThree(layer.color),
@@ -452,7 +464,7 @@ export function ThreeSliceViewer({
         depthWrite: false,
       });
       const fallback = new THREE.Mesh(fallbackGeo, fallbackMat);
-      fallback.position.set(0, 0, z - 0.01); // slightly behind
+      fallback.position.set(0, 0, z - 0.01);
       fallback.userData = { isFallback: true };
       group.add(fallback);
 
@@ -495,7 +507,6 @@ export function ThreeSliceViewer({
       const isIsolated = isolatedLayerId === null || layerId === isolatedLayerId;
 
       group.traverse((obj) => {
-        // Textured plane
         if ((obj as THREE.Mesh).isMesh && obj.userData?.isTexPlane) {
           const mat = (obj as THREE.Mesh).material as THREE.MeshBasicMaterial;
           if (!isIsolated) {
@@ -506,12 +517,10 @@ export function ThreeSliceViewer({
             mat.opacity = 0.92;
           }
         }
-        // Fallback plane
         if ((obj as THREE.Mesh).isMesh && obj.userData?.isFallback) {
           const mat = (obj as THREE.Mesh).material as THREE.MeshBasicMaterial;
           mat.opacity = isIsolated ? (texCacheRef.current.has(layerId) ? 0 : 0.18) : 0.03;
         }
-        // Sprites (labels)
         if ((obj as THREE.Sprite).isSprite) {
           (obj as THREE.Sprite).material.opacity = isIsolated ? 1 : 0.15;
         }

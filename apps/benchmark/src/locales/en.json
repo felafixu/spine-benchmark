@@ -1523,9 +1523,9 @@
     }
   },
   "zSlice": {
-    "subtitle": "Visualize skeleton layers in an exploded 3D view — split by draw order, bone depth, or custom grouping.",
+    "subtitle": "Visualize skeleton layers in an exploded 3D view — split by draw call batch, bone depth, or custom grouping.",
     "modes": {
-      "drawOrder": "Draw Order",
+      "drawCall": "Draw Calls",
       "treeDepth": "Tree Depth",
       "customLock": "Custom Lock"
     },
@@ -1537,7 +1537,8 @@
       "title": "Bone Hierarchy"
     },
     "layerList": {
-      "title": "Layers"
+      "title": "Layers",
+      "drawCalls": "Draw Calls"
     },
     "empty": {
       "title": "Z-Slice Viewer",

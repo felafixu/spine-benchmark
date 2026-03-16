@@ -7,7 +7,7 @@ import { RouteStateCallout } from '../components/insights/MetricInsightTools';
 import { AnimationControls } from '../components/AnimationControls';
 import { ThreeSliceViewer } from '../components/ThreeSliceViewer';
 import { useZSlice, SliceMode, BoneTreeNode } from '../hooks/useZSlice';
-import { Lock, Unlock, ChevronRight, ChevronDown, Layers, GitBranch, MousePointerClick } from 'lucide-react';
+import { Lock, Unlock, ChevronRight, ChevronDown, Cpu, GitBranch, MousePointerClick } from 'lucide-react';
 
 /* ── Bone tree renderer for custom-lock mode ──────────────────────── */
 
@@ -138,7 +138,7 @@ export function ZSliceRouteView() {
   };
 
   const MODE_OPTIONS: { value: SliceMode; icon: React.ReactNode; labelKey: string }[] = [
-    { value: 'draw-order', icon: <Layers size={14} />, labelKey: 'zSlice.modes.drawOrder' },
+    { value: 'draw-call', icon: <Cpu size={14} />, labelKey: 'zSlice.modes.drawCall' },
     { value: 'tree-depth', icon: <GitBranch size={14} />, labelKey: 'zSlice.modes.treeDepth' },
     { value: 'custom-lock', icon: <MousePointerClick size={14} />, labelKey: 'zSlice.modes.customLock' },
   ];
@@ -244,7 +244,7 @@ export function ZSliceRouteView() {
 
               {/* Layer list */}
               <div className="zslice-layer-list-header">
-                <span>{t('zSlice.layerList.title')}</span>
+                <span>{mode === 'draw-call' ? t('zSlice.layerList.drawCalls') : t('zSlice.layerList.title')}</span>
                 <span className="zslice-layer-count">{layers.length}</span>
               </div>
               <div className="zslice-layer-list">
@@ -266,6 +266,11 @@ export function ZSliceRouteView() {
                     <span className="zslice-layer-label" title={layer.label}>
                       {layer.label}
                     </span>
+                    {layer.meta && (
+                      <span className="zslice-layer-meta" title={layer.meta}>
+                        {layer.meta}
+                      </span>
+                    )}
                     <span className="zslice-layer-slot-count">
                       {layer.slots.length}
                     </span>

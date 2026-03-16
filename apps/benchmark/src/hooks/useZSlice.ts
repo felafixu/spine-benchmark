@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { Spine } from '@esotericsoftware/spine-pixi-v8';
 import type { Bone, Slot } from '@esotericsoftware/spine-core';
+import { collectSnapshot } from './useDrawCallInspector';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
-export type SliceMode = 'draw-order' | 'tree-depth' | 'custom-lock';
+export type SliceMode = 'draw-call' | 'tree-depth' | 'custom-lock';
 
 export interface SliceSlotInfo {
   /** Index in the skeleton.drawOrder array */
@@ -20,6 +21,8 @@ export interface SliceLayer {
   label: string;
   color: string;
   slots: SliceSlotInfo[];
+  /** Extra info shown in the layer list (e.g. atlas page, blend mode) */
+  meta?: string;
 }
 
 export interface BoneTreeNode {
@@ -108,14 +111,66 @@ function collectSlotsFromSubtree(node: BoneTreeNode): SliceSlotInfo[] {
 
 /* ── Slice strategies ──────────────────────────────────────────────── */
 
-function sliceByDrawOrder(spine: Spine): SliceLayer[] {
-  const slotInfos = extractSlotInfos(spine);
-  return slotInfos.map((s, i) => ({
-    id: `do-${s.drawIndex}`,
-    label: s.attachmentName ?? s.slotName,
-    color: layerColor(i),
-    slots: [s],
-  }));
+/**
+ * Group slots by draw-call batch.  A new batch starts whenever the
+ * atlas page or blend mode changes between consecutive *visible* slots,
+ * exactly mirroring the GPU flush logic in the PixiJS Spine renderer.
+ *
+ * This runs every ~100 ms (driven by rAF) so the slices update live
+ * as the animation plays.
+ */
+function sliceByDrawCall(spine: Spine): SliceLayer[] {
+  const snapshot = collectSnapshot(spine.skeleton);
+  if (snapshot.slots.length === 0) return [];
+
+  const layers: SliceLayer[] = [];
+  let batchIdx = 0;
+  let currentSlots: SliceSlotInfo[] = [];
+  let batchPage = '';
+  let batchBlend = '';
+
+  for (const info of snapshot.slots) {
+    // Skip invisible slots — they don't contribute to draw calls
+    if (info.isInvisible) continue;
+
+    // When a break occurs (or first slot), start a new batch layer
+    if (currentSlots.length === 0 || info.isBreak) {
+      if (currentSlots.length > 0) {
+        layers.push({
+          id: `dc-${batchIdx}`,
+          label: `DC ${batchIdx + 1}`,
+          color: layerColor(batchIdx),
+          slots: currentSlots,
+          meta: `${batchPage} · ${batchBlend}`,
+        });
+        batchIdx++;
+      }
+      currentSlots = [];
+      batchPage = info.atlasPage;
+      batchBlend = info.blendMode;
+    }
+
+    currentSlots.push({
+      drawIndex: info.index,
+      slotName: info.slotName,
+      boneName: '', // not needed for capture (uses slotName)
+      attachmentName: info.attachmentName,
+      isVisible: true,
+    });
+  }
+
+  // Push the last batch
+  if (currentSlots.length > 0) {
+    layers.push({
+      id: `dc-${batchIdx}`,
+      label: `DC ${batchIdx + 1}`,
+      color: layerColor(batchIdx),
+      slots: currentSlots,
+      meta: `${batchPage} · ${batchBlend}`,
+    });
+  }
+
+  return layers;
 }
 
 function sliceByTreeDepth(spine: Spine, maxDepth: number): SliceLayer[] {
@@ -193,8 +248,10 @@ function sliceByCustomLock(tree: BoneTreeNode): SliceLayer[] {
 
 /* ── Hook ──────────────────────────────────────────────────────────── */
 
+const DC_POLL_MS = 100;
+
 export function useZSlice(spineInstance: Spine | null) {
-  const [mode, setMode] = useState<SliceMode>('draw-order');
+  const [mode, setMode] = useState<SliceMode>('draw-call');
   const [treeDepth, setTreeDepth] = useState(3);
   const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
   const [isolatedLayerId, setIsolatedLayerId] = useState<string | null>(null);
@@ -225,17 +282,55 @@ export function useZSlice(spineInstance: Spine | null) {
     setBoneTree(toggle(boneTree));
   }, [boneTree]);
 
-  const layers = useMemo<SliceLayer[]>(() => {
+  // ── Live draw-call layers (polled via rAF) ───────────────────────
+  const [dcLayers, setDcLayers] = useState<SliceLayer[]>([]);
+  const lastDcPollRef = useRef(0);
+
+  useEffect(() => {
+    if (!spineInstance || mode !== 'draw-call') {
+      setDcLayers([]);
+      return;
+    }
+
+    let rafId: number;
+    let running = true;
+
+    const tick = () => {
+      if (!running) return;
+      const now = performance.now();
+      if (now - lastDcPollRef.current >= DC_POLL_MS) {
+        lastDcPollRef.current = now;
+        try {
+          const next = sliceByDrawCall(spineInstance);
+          setDcLayers(next);
+        } catch {
+          // skeleton may not be ready
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => {
+      running = false;
+      cancelAnimationFrame(rafId);
+    };
+  }, [spineInstance, mode]);
+
+  // ── Static layers for non-live modes ─────────────────────────────
+  const staticLayers = useMemo<SliceLayer[]>(() => {
     if (!spineInstance) return [];
     switch (mode) {
-      case 'draw-order':
-        return sliceByDrawOrder(spineInstance);
+      case 'draw-call':
+        return []; // handled by dcLayers state
       case 'tree-depth':
         return sliceByTreeDepth(spineInstance, treeDepth);
       case 'custom-lock':
         return boneTree ? sliceByCustomLock(boneTree) : [];
     }
   }, [spineInstance, mode, treeDepth, boneTree]);
+
+  const layers = mode === 'draw-call' ? dcLayers : staticLayers;
 
   const slotInfos = useMemo(() => {
     if (!spineInstance) return [];

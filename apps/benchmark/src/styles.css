@@ -7733,6 +7733,18 @@ select:focus,
   min-width: 0;
 }
 
+.zslice-layer-meta {
+  font-family: var(--sb-font-mono);
+  font-size: 9px;
+  color: var(--sb-text-muted);
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90px;
+  flex-shrink: 1;
+}
+
 .zslice-layer-slot-count {
   font-family: var(--sb-font-mono);
   font-size: 10px;
