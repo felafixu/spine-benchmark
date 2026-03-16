@@ -122,3 +122,11 @@ export function usePixiApp({ containerRef, backgroundColor }: UsePixiAppOptions)
 
   return app;
 }
+
+/**
+ * Direct access to the singleton PIXI Application (if already initialised).
+ * Useful for texture extraction in non-canvas routes (e.g. Z-Slice).
+ */
+export function getPixiApp(): Application | null {
+  return singletonApp;
+}

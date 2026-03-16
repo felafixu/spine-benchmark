@@ -793,7 +793,8 @@
       "drawCallInspector": "Инспектор отрисовки",
       "atlasRepack": "Анализ атласа",
       "comparison": "Сравнение",
-      "animationHeatmap": "Тепловая карта анимаций"
+      "animationHeatmap": "Тепловая карта анимаций",
+      "zSlice": "Z-Срез"
     },
     "actions": {
       "import": "Импорт",
@@ -1519,6 +1520,39 @@
       "pageBreaks": "PB: {{value}}",
       "blendBreaks": "BB: {{value}}",
       "visibleSlots": "Slots: {{value}}"
+    }
+  },
+  "zSlice": {
+    "subtitle": "Визуализация слоёв скелета в 3D — разбивка по порядку отрисовки, глубине дерева или пользовательской группировке.",
+    "modes": {
+      "drawOrder": "Порядок отрисовки",
+      "treeDepth": "Глубина дерева",
+      "customLock": "Группировка"
+    },
+    "controls": {
+      "depth": "Макс. глубина",
+      "spacing": "Расстояние между слоями"
+    },
+    "boneTree": {
+      "title": "Иерархия костей"
+    },
+    "layerList": {
+      "title": "Слои"
+    },
+    "empty": {
+      "title": "Z-Срез",
+      "hint": "Загрузите Spine ассет для просмотра слоёв в 3D."
+    },
+    "states": {
+      "loading": {
+        "title": "Загрузка...",
+        "description": "Подготовка скелета Spine для нарезки."
+      },
+      "loadError": {
+        "title": "Ошибка загрузки",
+        "retry": "Повторить",
+        "dismiss": "Закрыть"
+      }
     }
   },
   "assets": {

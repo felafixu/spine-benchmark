@@ -803,7 +803,8 @@
       "drawCallInspector": "Draw Call Inspector",
       "atlasRepack": "Atlas Repack Advisor",
       "comparison": "Comparison",
-      "animationHeatmap": "Animation Heatmap"
+      "animationHeatmap": "Animation Heatmap",
+      "zSlice": "Z-Slice"
     },
     "actions": {
       "import": "Import",
@@ -1519,6 +1520,39 @@
       "pageBreaks": "PB: {{value}}",
       "blendBreaks": "BB: {{value}}",
       "visibleSlots": "Slots: {{value}}"
+    }
+  },
+  "zSlice": {
+    "subtitle": "Visualize skeleton layers in an exploded 3D view — split by draw order, bone depth, or custom grouping.",
+    "modes": {
+      "drawOrder": "Draw Order",
+      "treeDepth": "Tree Depth",
+      "customLock": "Custom Lock"
+    },
+    "controls": {
+      "depth": "Max depth",
+      "spacing": "Layer spacing"
+    },
+    "boneTree": {
+      "title": "Bone Hierarchy"
+    },
+    "layerList": {
+      "title": "Layers"
+    },
+    "empty": {
+      "title": "Z-Slice Viewer",
+      "hint": "Load a Spine asset to explore its layers in an exploded 3D view."
+    },
+    "states": {
+      "loading": {
+        "title": "Loading...",
+        "description": "Preparing Spine skeleton for slicing."
+      },
+      "loadError": {
+        "title": "Load Error",
+        "retry": "Retry",
+        "dismiss": "Dismiss"
+      }
     }
   },
   "assets": {

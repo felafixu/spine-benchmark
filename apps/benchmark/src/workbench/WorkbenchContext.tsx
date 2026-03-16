@@ -4,7 +4,7 @@ import { SpineAnalysisResult } from '../core/SpineAnalyzer';
 import { StoredAsset } from '../core/storage/assetStore';
 
 export interface RouteSelectionState {
-  sourceRoute: 'benchmark' | 'mesh-optimizer' | 'draw-call-inspector' | 'atlas-repack' | 'physics-baker' | 'comparison' | 'animation-heatmap' | null;
+  sourceRoute: 'benchmark' | 'mesh-optimizer' | 'draw-call-inspector' | 'atlas-repack' | 'physics-baker' | 'comparison' | 'animation-heatmap' | 'z-slice' | null;
   slotIndex: number | null;
   slotName: string | null;
   attachmentName: string | null;

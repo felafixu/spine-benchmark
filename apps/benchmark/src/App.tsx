@@ -34,6 +34,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Square,
+  Layers,
 } from 'lucide-react';
 import benchmarkBrandIcon from '../assets/favicon.svg';
 import { GitHubIcon, TelegramIcon } from './components/Icons';
@@ -837,6 +838,10 @@ const App: React.FC = () => {
             <Link to="/tools/comparison" className={`tool-chip ${pathname.startsWith('/tools/comparison') ? 'active' : ''}`}>
               <span className="tool-chip-icon" aria-hidden="true"><Play className="icon" size={14} strokeWidth={2} /></span>
               <span className="tool-chip-label">{t('dashboard.tools.comparison')}</span>
+            </Link>
+            <Link to="/tools/z-slice" className={`tool-chip ${pathname.startsWith('/tools/z-slice') ? 'active' : ''}`}>
+              <span className="tool-chip-icon" aria-hidden="true"><Layers className="icon" size={14} strokeWidth={2} /></span>
+              <span className="tool-chip-label">{t('dashboard.tools.zSlice')}</span>
             </Link>
           </div>
         </section>
