@@ -1051,10 +1051,14 @@
     }
   },
   "appErrorBoundary": {
-    "title": "Something went wrong",
-    "description": "The app hit an unexpected error. Reload to continue.",
-    "reload": "Reload App",
-    "retry": "Try Again"
+    "title": "Что-то пошло не так!",
+    "description": "Произошла непредвиденная ошибка. Попробуйте снова, перезагрузите или сообщите об ошибке.",
+    "reload": "Перезагрузить",
+    "retry": "Попробовать снова",
+    "reportBug": "Сообщить об ошибке",
+    "showError": "Показать детали ошибки",
+    "hideError": "Скрыть детали ошибки",
+    "unknownError": "Произошла неизвестная ошибка"
   },
   "physicsBaker": {
     "title": "Physics Baker",

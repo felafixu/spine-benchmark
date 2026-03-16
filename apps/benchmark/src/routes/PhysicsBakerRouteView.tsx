@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimationControls } from '../components/AnimationControls';
 import { useWorkbench } from '../workbench/WorkbenchContext';
 import { ToolRouteControls } from '../components/ToolRouteControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { useConstraintInspector } from '../hooks/useConstraintInspector';
-import { reparentPixiCanvas } from '../hooks/usePixiApp';
 import { assetToFiles } from '../core/storage/assetStore';
 import { bakeConstraints, BakeReport, ConstraintInfo } from '../core/constraintBaker';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
@@ -19,6 +18,7 @@ const TYPE_COLORS: Record<ConstraintInfo['type'], string> = {
 
 export function PhysicsBakerRouteView() {
   const { t } = useTranslation();
+  const canvasSlotRef = useRef<HTMLDivElement>(null);
   const {
     spineInstance,
     urlLoadStatus,
@@ -27,7 +27,7 @@ export function PhysicsBakerRouteView() {
     handleDrop,
     handleDragOver,
     handleDragLeave,
-    pixiContainerRef,
+    setCanvasInteractionElement,
     assets,
     selectedAssetId,
     setSelectedAssetId,
@@ -52,12 +52,12 @@ export function PhysicsBakerRouteView() {
 
   const constraints = useConstraintInspector(spineInstance);
 
-  // Re-parent the singleton PIXI canvas into this route's pixi-host div
   useEffect(() => {
-    if (pixiContainerRef.current) {
-      reparentPixiCanvas(pixiContainerRef.current);
+    if (canvasSlotRef.current) {
+      setCanvasInteractionElement(canvasSlotRef.current);
     }
-  }, [pixiContainerRef]);
+    return () => setCanvasInteractionElement(null);
+  }, [setCanvasInteractionElement]);
 
   // Reset state when asset changes
   useEffect(() => {
@@ -334,13 +334,13 @@ export function PhysicsBakerRouteView() {
         {/* Right side - canvas + animation controls */}
         <div className="tool-canvas">
           <div
+            ref={canvasSlotRef}
             className="canvas-container"
             data-tour="canvas-dropzone"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <div ref={pixiContainerRef} className="pixi-host" />
             <div className="canvas-grid-overlay" />
             <CanvasStatsOverlay spineInstance={spineInstance} />
 

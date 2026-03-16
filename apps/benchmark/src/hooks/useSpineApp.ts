@@ -7,19 +7,21 @@ import { useSpineLoader } from './useSpineLoader';
 import { useDebugVisualizer } from './useDebugVisualizer';
 import { useBackgroundManager } from './useBackgroundManager';
 
-export function useSpineApp(app: Application | null) {
+export function useSpineApp(app: Application | null, pixiHostRef: React.RefObject<HTMLDivElement | null>) {
   const { i18n } = useTranslation();
   const [benchmarkData, setBenchmarkData] = useState<SpineAnalysisResult | null>(null);
-  
+
   const cameraContainerRef = useRef<CameraContainer | null>(null);
-  
-  const { 
-    spineInstance, 
-    isLoading, 
-    loadSpineFiles, 
+  const canvasSlotElementRef = useRef<HTMLElement | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  const {
+    spineInstance,
+    isLoading,
+    loadSpineFiles,
     loadSpineFromUrls
   } = useSpineLoader(app);
-  
+
   const {
     meshesVisible,
     physicsVisible,
@@ -32,10 +34,10 @@ export function useSpineApp(app: Application | null) {
     toggleTransformConstraints,
     togglePathConstraints
   } = useDebugVisualizer();
-  
-  const { 
-    hasBackground, 
-    setBackgroundImage, 
+
+  const {
+    hasBackground,
+    setBackgroundImage,
     clearBackgroundImage
   } = useBackgroundManager(app);
 
@@ -53,6 +55,90 @@ export function useSpineApp(app: Application | null) {
 
   const setMeshHighlightStyle = useCallback((style: { color?: number; lineWidth?: number }) => {
     cameraContainerRef.current?.setMeshHighlightStyle(style);
+  }, []);
+
+  /** Sync pixi-host-persistent position/size to match the canvas slot element */
+  const syncPixiHostToSlot = useCallback(() => {
+    const host = pixiHostRef.current;
+    const slot = canvasSlotElementRef.current;
+    if (!host || !slot) return;
+
+    const main = host.parentElement;
+    if (!main) return;
+
+    const mainRect = main.getBoundingClientRect();
+    const slotRect = slot.getBoundingClientRect();
+
+    const top = slotRect.top - mainRect.top;
+    const left = slotRect.left - mainRect.left;
+    const width = slotRect.width;
+    const height = slotRect.height;
+
+    host.style.top = `${top}px`;
+    host.style.left = `${left}px`;
+    host.style.width = `${width}px`;
+    host.style.height = `${height}px`;
+
+    // Copy border-radius so the canvas clips to the same shape
+    const slotStyle = window.getComputedStyle(slot);
+    host.style.borderRadius = slotStyle.borderRadius;
+
+    // Resize the PixiJS renderer and re-center the spine to match
+    if (app && width > 0 && height > 0) {
+      const prevW = app.screen.width;
+      const prevH = app.screen.height;
+      app.renderer.resize(width, height);
+
+      // If the canvas size actually changed, re-center the spine so
+      // lookAtChild uses the correct viewport dimensions.
+      const cc = cameraContainerRef.current;
+      if (cc?.currentSpine && (prevW !== width || prevH !== height)) {
+        cc.lookAtChild(cc.currentSpine);
+      }
+    }
+  }, [app, pixiHostRef]);
+
+  const setCanvasInteractionElement = useCallback((element: HTMLElement | null) => {
+    // Clean up previous observer
+    if (resizeObserverRef.current) {
+      resizeObserverRef.current.disconnect();
+      resizeObserverRef.current = null;
+    }
+
+    canvasSlotElementRef.current = element;
+
+    const cc = cameraContainerRef.current;
+    if (cc && typeof cc.setInteractionElement === 'function') {
+      cc.setInteractionElement(element);
+    }
+
+    const host = pixiHostRef.current;
+    if (!element || !host) {
+      // No slot — hide the canvas
+      if (host) {
+        host.style.display = 'none';
+      }
+      return;
+    }
+
+    // Show and position the canvas host
+    host.style.display = 'block';
+    syncPixiHostToSlot();
+
+    // Observe size changes on the slot and its scroll-parent
+    const ro = new ResizeObserver(() => syncPixiHostToSlot());
+    ro.observe(element);
+    // Also observe the workspace-main parent in case the sidebar toggles
+    const main = host.parentElement;
+    if (main) ro.observe(main);
+    resizeObserverRef.current = ro;
+  }, [pixiHostRef, syncPixiHostToSlot]);
+
+  // Clean up ResizeObserver on unmount
+  useEffect(() => {
+    return () => {
+      resizeObserverRef.current?.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -79,7 +165,7 @@ export function useSpineApp(app: Application | null) {
     const cameraContainer = cameraContainerRef.current;
     if (!cameraContainer) return;
 
-    if (!spineInstance) {
+    if (!spineInstance || !spineInstance.skeleton) {
       setBenchmarkData(null);
       cameraContainer.clearSpine();
       return;
@@ -104,7 +190,7 @@ export function useSpineApp(app: Application | null) {
   }, [spineInstance]);
 
   useEffect(() => {
-    if (spineInstance) {
+    if (spineInstance?.skeleton?.data) {
       setBenchmarkData(SpineAnalyzer.analyze(spineInstance));
     }
   }, [spineInstance, i18n.language]);
@@ -146,6 +232,7 @@ export function useSpineApp(app: Application | null) {
     getCameraContainer,
     setHighlightedMeshSlot,
     setSlotHighlight,
-    setMeshHighlightStyle
+    setMeshHighlightStyle,
+    setCanvasInteractionElement
   };
 }

@@ -187,7 +187,7 @@ const App: React.FC = () => {
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('language');
   const [routeSelection, setRouteSelection] = useState<RouteSelectionState>(DEFAULT_ROUTE_SELECTION);
   const [lastLoadError, setLastLoadError] = useState<string | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useSafeLocalStorage('spine-benchmark-sidebar-collapsed', false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const migratedLegacyBackgroundRef = useRef(false);
 
   const { addToast } = useToast();
@@ -215,7 +215,8 @@ const App: React.FC = () => {
     setHighlightedMeshSlot,
     setSlotHighlight,
     setMeshHighlightStyle,
-  } = useSpineApp(app);
+    setCanvasInteractionElement,
+  } = useSpineApp(app, pixiContainerRef);
 
   useEffect(() => {
     const normalizedBackground = normalizeHexColor(backgroundColor, DEFAULT_VIEWPORT_BACKGROUND);
@@ -745,7 +746,8 @@ const App: React.FC = () => {
     routeSelection,
     setRouteSelection,
     lastLoadError,
-    clearLastLoadError: () => setLastLoadError(null)
+    clearLastLoadError: () => setLastLoadError(null),
+    setCanvasInteractionElement
   }), [
     spineInstance,
     benchmarkData,
@@ -782,7 +784,8 @@ const App: React.FC = () => {
     meshHighlightColor,
     meshHighlightLineWidth,
     routeSelection,
-    lastLoadError
+    lastLoadError,
+    setCanvasInteractionElement
   ]);
 
   return (
@@ -891,8 +894,22 @@ const App: React.FC = () => {
       </aside>
 
       <main className="workspace-main">
-        <Outlet />
+        <div ref={pixiContainerRef} className="pixi-host-persistent" />
+        <div className="workspace-content">
+          <Outlet />
+        </div>
       </main>
+
+      {sidebarCollapsed && (
+        <button
+          type="button"
+          className="sidebar-expand-fab"
+          onClick={() => setSidebarCollapsed(false)}
+          aria-label="Expand sidebar"
+        >
+          <ChevronRight size={16} />
+        </button>
+      )}
 
       {showWelcome && (
         <div className="welcome-backdrop">

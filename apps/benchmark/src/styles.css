@@ -349,27 +349,44 @@ body {
 
 /* ── Collapsible Sidebar ──────────────────────────────────────────── */
 .app-shell.sidebar-collapsed {
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 0px minmax(0, 1fr);
 }
 
 .app-sidebar.collapsed {
-  width: 52px;
-  padding: 16px 8px;
-  overflow: visible;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border-right: none;
+  pointer-events: none;
+  opacity: 0;
 }
 
-.app-sidebar.collapsed .sidebar-section,
-.app-sidebar.collapsed .sidebar-outreach,
-.app-sidebar.collapsed .sidebar-tour-btn {
-  display: none;
-}
-
-.app-sidebar.collapsed .sidebar-brand-text {
-  display: none;
-}
-
-.app-sidebar.collapsed .sidebar-header {
+/* Floating expand button when sidebar is collapsed */
+.sidebar-expand-fab {
+  position: fixed;
+  top: 18px;
+  left: 8px;
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--sb-border);
+  border-radius: 50%;
+  background: var(--sb-bg-2);
+  color: var(--sb-text-secondary);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  transition: background var(--sb-duration) var(--sb-ease),
+              color var(--sb-duration) var(--sb-ease);
+}
+
+.sidebar-expand-fab:hover {
+  background: var(--sb-bg-3);
+  color: var(--sb-text);
+  border-color: var(--sb-border-strong);
 }
 
 .sidebar-collapse-btn {
@@ -1003,7 +1020,29 @@ input[type="color"]::-webkit-color-swatch {
   background: transparent;
 }
 
-.workspace-main > * {
+.pixi-host-persistent {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+  display: none; /* shown by JS when a route registers its canvas slot */
+}
+
+.pixi-host-persistent canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none;
+}
+
+.workspace-content {
+  position: relative;
+  /* no z-index — must NOT create a stacking context so canvas overlays
+     can individually sit above pixi-host-persistent (z-index 5) */
+  height: 100%;
+}
+
+.workspace-content > * {
   height: 100%;
 }
 
@@ -1191,8 +1230,7 @@ input[type="color"]::-webkit-color-swatch {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  isolation: isolate;
-  background: var(--sb-canvas-bg);
+  background: transparent;
 }
 
 .pixi-host {
@@ -1211,7 +1249,7 @@ input[type="color"]::-webkit-color-swatch {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
+  z-index: 1;
   opacity: 0.2;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
@@ -3381,7 +3419,7 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .app-error-boundary-card {
-  width: min(480px, 100%);
+  width: min(520px, 100%);
   border: 1px solid var(--sb-border-strong);
   border-radius: var(--sb-radius-lg);
   padding: 28px;
@@ -3399,12 +3437,73 @@ input[type="color"]::-webkit-color-swatch {
   margin: 0 0 16px;
   color: var(--sb-text-secondary);
   font-size: 13px;
+  line-height: 1.5;
+}
+
+.app-error-boundary-message {
+  background: var(--sb-bg-0);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.app-error-boundary-message code {
+  font-family: var(--sb-font-mono);
+  font-size: 12px;
+  color: #e05252;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.app-error-boundary-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 12px;
+  font-family: var(--sb-font-mono);
+  font-size: 11px;
+  color: var(--sb-text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+.app-error-boundary-toggle:hover {
+  color: var(--sb-text-secondary);
+}
+
+.app-error-boundary-details {
+  background: var(--sb-bg-0);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  max-height: 200px;
+  overflow: auto;
+  font-family: var(--sb-font-mono);
+  font-size: 11px;
+  color: var(--sb-text-secondary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .app-error-boundary-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.app-error-boundary-report {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 
@@ -4667,7 +4766,7 @@ input[type="color"]::-webkit-color-swatch {
   position: absolute;
   top: 12px;
   right: 12px;
-  z-index: 5;
+  z-index: 10;
   display: flex;
   gap: 12px;
   padding: 0;
@@ -5280,11 +5379,11 @@ select:focus,
 .tool-canvas .canvas-container {
   border-radius: 16px;
   border: 1px solid var(--sb-border);
-  background: var(--sb-canvas-bg);
+  background: transparent;
 }
 
 .canvas-container {
-  background: var(--sb-canvas-bg);
+  background: transparent;
 }
 
 .canvas-grid-overlay {
@@ -5456,7 +5555,7 @@ select:focus,
   }
 
   .app-shell.sidebar-collapsed {
-    grid-template-columns: 52px minmax(0, 1fr);
+    grid-template-columns: 0px minmax(0, 1fr);
   }
 
   .tool-route-inline {
@@ -5993,6 +6092,7 @@ select:focus,
   min-height: 0;
   border-radius: 20px;
   border: 1px solid #e8e4df;
+  background: transparent;
 }
 
 .route-workspace .tool-canvas .controls-container {

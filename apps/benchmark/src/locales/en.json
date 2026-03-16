@@ -275,10 +275,14 @@
     "changeLanguageDescription": "Open language selection modal"
   },
   "appErrorBoundary": {
-    "title": "Something went wrong",
-    "description": "The app hit an unexpected error. Reload to continue.",
+    "title": "Something went wrong!",
+    "description": "The app hit an unexpected error. You can try again, reload, or report this as a bug.",
     "retry": "Try Again",
-    "reload": "Reload App"
+    "reload": "Reload App",
+    "reportBug": "Report Bug",
+    "showError": "Show Error Details",
+    "hideError": "Hide Error Details",
+    "unknownError": "An unknown error occurred"
   },
   "analysis": {
     "summary": {

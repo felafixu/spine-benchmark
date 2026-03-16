@@ -81,16 +81,6 @@ export const PhysicsAnalysis: React.FC<PhysicsAnalysisProps> = ({ data }) => {
       <ConstraintImpactBreakdown data={data} />
       <ConstraintDetails data={data} />
       
-      <div className="analysis-notes">
-        <h4>{t('analysis.physics.notes.title')}</h4>
-        <ul>
-          <li><strong>{t('analysis.physics.constraintTypes.ik')}:</strong> {t('analysis.physics.notes.ikConstraints')}</li>
-          <li><strong>{t('analysis.physics.constraintTypes.physics')}:</strong> {t('analysis.physics.notes.physicsConstraints')}</li>
-          <li><strong>{t('analysis.physics.constraintTypes.path')}:</strong> {t('analysis.physics.notes.pathConstraints')}</li>
-          <li><strong>{t('analysis.physics.constraintTypes.transform')}:</strong> {t('analysis.physics.notes.transformConstraints')}</li>
-          <li><strong>{t('analysis.physics.notes.recommendation').split(':')[0]}:</strong> {t('analysis.physics.notes.recommendation').split(':')[1]}</li>
-        </ul>
-      </div>
     </div>
   );
 };

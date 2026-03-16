@@ -64,5 +64,10 @@ export default defineConfig({
       "pixi.js",
       "gsap",
     ],
+    exclude: [
+      "@spine-benchmark/render-tools",
+      "@spine-benchmark/spine-loader",
+      "@spine-benchmark/metrics-reporting",
+    ],
   },
 });

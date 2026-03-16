@@ -1,5 +1,6 @@
 import {
   AtlasAttachmentLoader,
+  Physics,
   SkeletonBinary,
   SkeletonData,
   SkeletonJson,
@@ -100,8 +101,12 @@ export class SpineLoader {
       const skeletonJson = new SkeletonJson(atlasLoader);
       const skeletonDataObj = skeletonJson.readSkeletonData(skeletonData);
       
-      // Create and return spine instance
-      return new Spine(skeletonDataObj);
+      // Create spine instance with autoUpdate disabled until initialised.
+      const spineInstance = new Spine({ skeletonData: skeletonDataObj, autoUpdate: false });
+      spineInstance.skeleton.setToSetupPose();
+      spineInstance.skeleton.updateWorldTransform(Physics.update);
+      spineInstance.autoUpdate = true;
+      return spineInstance;
       
     } catch (error) {
       console.error('Error loading Spine files from URLs:', error);
@@ -486,7 +491,23 @@ export class SpineLoader {
      skeletonData = skeletonJson.readSkeletonData(data);
     }
     
-    // Create spine instance
-    return new Spine(skeletonData);
+    // Create spine instance.
+    // Disable autoUpdate initially so the ticker doesn't fire before the
+    // skeleton has been fully initialised with a world-transform pass.
+    const spineInstance = new Spine({ skeletonData, autoUpdate: false });
+
+    // Force setup pose + initial world transform so every bone, slot and
+    // physics constraint is in a valid state before PixiJS ever tries to
+    // collect renderables from this object.  Without this, skeletons with
+    // many empty slots or physics constraints can crash with
+    // "null is not an object (evaluating 'renderable.renderPipeId')"
+    // because the render pipeline encounters uninitialised attachment data.
+    spineInstance.skeleton.setToSetupPose();
+    spineInstance.skeleton.updateWorldTransform(Physics.update);
+
+    // Now safe to let the ticker drive updates.
+    spineInstance.autoUpdate = true;
+
+    return spineInstance;
   }
 }

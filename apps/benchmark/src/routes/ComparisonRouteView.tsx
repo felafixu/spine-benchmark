@@ -91,12 +91,12 @@ export function ComparisonRouteView() {
     if (!leftPane.spine || !rightPane.spine) {
       const single = leftPane.spine || rightPane.spine;
       if (!single) return [];
-      return single.skeleton.data.animations.map((a) => a.name);
+      return single.skeleton?.data?.animations?.map((a) => a.name) ?? [];
     }
     const leftNames = new Set(
-      leftPane.spine.skeleton.data.animations.map((a) => a.name),
+      leftPane.spine.skeleton?.data?.animations?.map((a) => a.name) ?? [],
     );
-    return rightPane.spine.skeleton.data.animations
+    return (rightPane.spine.skeleton?.data?.animations ?? [])
       .map((a) => a.name)
       .filter((n) => leftNames.has(n));
   }, [leftPane.spine, rightPane.spine]);
@@ -105,12 +105,12 @@ export function ComparisonRouteView() {
     if (!leftPane.spine || !rightPane.spine) {
       const single = leftPane.spine || rightPane.spine;
       if (!single) return [];
-      return single.skeleton.data.skins.map((s) => s.name);
+      return single.skeleton?.data?.skins?.map((s) => s.name) ?? [];
     }
     const leftNames = new Set(
-      leftPane.spine.skeleton.data.skins.map((s) => s.name),
+      leftPane.spine.skeleton?.data?.skins?.map((s) => s.name) ?? [],
     );
-    return rightPane.spine.skeleton.data.skins
+    return (rightPane.spine.skeleton?.data?.skins ?? [])
       .map((s) => s.name)
       .filter((n) => leftNames.has(n));
   }, [leftPane.spine, rightPane.spine]);
@@ -134,7 +134,7 @@ export function ComparisonRouteView() {
     (name: string, loop: boolean) => {
       for (const spine of [leftPane.spine, rightPane.spine]) {
         if (!spine) continue;
-        const has = spine.skeleton.data.animations.some((a) => a.name === name);
+        const has = spine.skeleton?.data?.animations?.some((a) => a.name === name) ?? false;
         if (has) {
           spine.state.setAnimation(0, name, loop);
           spine.state.timeScale = 1;
@@ -148,7 +148,7 @@ export function ComparisonRouteView() {
     (name: string) => {
       for (const spine of [leftPane.spine, rightPane.spine]) {
         if (!spine) continue;
-        const skin = spine.skeleton.data.findSkin(name);
+        const skin = spine.skeleton?.data?.findSkin(name);
         if (!skin) continue;
         spine.skeleton.setSkin(skin);
         spine.skeleton.setSlotsToSetupPose();

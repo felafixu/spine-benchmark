@@ -68,13 +68,13 @@ export class CameraContainer extends Container {
   lastPosition: { x: number; y: number } | null = null;
 
   private debugRenderer: DebugRendererManager;
-  private currentSpine: Spine | null = null;
+  public currentSpine: Spine | null = null;
   private debugContainer: Container;
   private slotHighlightGraphics: Graphics;
   private highlightedSlotIndex: number | null = null;
   private meshHighlightColor = HIGHLIGHT_MESH_COLOR;
   private meshHighlightLineWidth = HIGHLIGHT_MESH_WIDTH;
-  private canvasView: HTMLCanvasElement | null = null;
+  private canvasView: HTMLElement | null = null;
   private isDisposed = false;
   private readonly tickerUpdate = () => {
     if (this.isDisposed || !this.currentSpine) return;
@@ -135,8 +135,8 @@ export class CameraContainer extends Container {
     this.setupEventListeners();
 
     // Center initially
-    this.x = this.app.renderer.width / 2;
-    this.y = this.app.renderer.height / 2;
+    this.x = this.app.screen.width / 2;
+    this.y = this.app.screen.height / 2;
 
     // Resize
     this.onResize = this.onResize.bind(this);
@@ -147,7 +147,7 @@ export class CameraContainer extends Container {
   }
 
   private setupEventListeners(): void {
-    const view = this.app.canvas as HTMLCanvasElement | undefined;
+    const view = this.app.canvas as HTMLElement | undefined;
     if (!view) return;
     this.canvasView = view;
     this.canvasView.addEventListener("mousedown", this.handleMouseDown);
@@ -168,8 +168,8 @@ export class CameraContainer extends Container {
   }
 
   public onResize(): void {
-    this.x = this.app.renderer.width / 2;
-    this.y = this.app.renderer.height / 2;
+    this.x = this.app.screen.width / 2;
+    this.y = this.app.screen.height / 2;
   }
 
   public lookAtChild(spine: Spine): void {
@@ -202,8 +202,8 @@ export class CameraContainer extends Container {
     let bounds = spine.getBounds();
     if (bounds.width === 0 || bounds.height === 0) {
       // fallback to data size halves if bounds unavailable
-      bounds.width = spine.skeleton.data.width / 2;
-      bounds.height = spine.skeleton.data.height / 2;
+      bounds.width = spine.skeleton?.data?.width ? spine.skeleton.data.width / 2 : 200;
+      bounds.height = spine.skeleton?.data?.height ? spine.skeleton.data.height / 2 : 200;
     }
 
     const scaleX = (this.app.screen.width - padding * 2) / bounds.width;
@@ -291,6 +291,22 @@ export class CameraContainer extends Container {
       this.meshHighlightLineWidth = style.lineWidth;
     }
     this.debugRenderer.setMeshHighlightStyle(style);
+  }
+
+  /**
+   * Swap the DOM element used for mouse/wheel interaction.
+   * Removes listeners from the previous element and attaches to the new one.
+   * Pass `null` to detach all listeners.
+   */
+  public setInteractionElement(element: HTMLElement | null): void {
+    this.removeEventListeners();
+    if (element) {
+      this.canvasView = element;
+      element.addEventListener("mousedown", this.handleMouseDown);
+      window.addEventListener("mousemove", this.handleMouseMove);
+      window.addEventListener("mouseup", this.handleMouseUp);
+      element.addEventListener("wheel", this.handleWheel, { passive: false });
+    }
   }
 
   public setSlotHighlight(slotIndex: number | null): void {
@@ -402,8 +418,8 @@ export class CameraContainer extends Container {
   }
 
   public centerViewport(): void {
-    const w = this.app.renderer.width;
-    const h = this.app.renderer.height;
+    const w = this.app.screen.width;
+    const h = this.app.screen.height;
     gsap.to(this, { x: w / 2, y: h / 2, duration: 0.5, ease: "power2.out" });
   }
 

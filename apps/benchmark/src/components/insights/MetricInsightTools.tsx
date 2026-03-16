@@ -12,13 +12,6 @@ export interface InsightMetric {
   tone?: InsightTone;
 }
 
-export interface InsightQuickAction {
-  id: string;
-  label: string;
-  impact: string;
-  onRun: () => void;
-}
-
 export interface InsightProofBlock {
   id: string;
   label: string;
@@ -36,8 +29,6 @@ export interface InsightJumpChip {
 export interface InsightExplainer {
   what: string;
   whyNow: string;
-  howToFix: string;
-  howToVerify: string;
 }
 
 export interface MetricInsightModel {
@@ -46,9 +37,7 @@ export interface MetricInsightModel {
   subtitle: string;
   sample: string;
   metrics: InsightMetric[];
-  quickActions: InsightQuickAction[];
   proofBlocks: InsightProofBlock[];
-  jumpChips: InsightJumpChip[];
   explainer: InsightExplainer;
 }
 
@@ -57,11 +46,6 @@ export interface RouteJumpChip {
   label: string;
   active?: boolean;
   onSelect: () => void;
-}
-
-interface RouteJumpStripProps {
-  chips: RouteJumpChip[];
-  selectionHint?: string;
 }
 
 interface RouteStateAction {
@@ -96,29 +80,6 @@ interface MetricExplainerModalProps {
 function getToneClass(tone: InsightTone | undefined): string {
   if (!tone) return 'tone-neutral';
   return `tone-${tone}`;
-}
-
-export function RouteJumpStrip({ chips, selectionHint }: RouteJumpStripProps) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="route-jump-strip" aria-label={t('ui.insights.crossRouteNavigation')}>
-      <div className="route-jump-strip-row">
-        {chips.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            className={`route-jump-chip${chip.active ? ' active' : ''}`}
-            onClick={chip.onSelect}
-            aria-current={chip.active ? 'page' : undefined}
-          >
-            {chip.label}
-          </button>
-        ))}
-      </div>
-      {selectionHint && <p className="route-jump-hint">{selectionHint}</p>}
-    </div>
-  );
 }
 
 export function RouteStateCallout({ kind, title, description, actions = [] }: RouteStateCalloutProps) {
@@ -241,40 +202,12 @@ export function MetricInsightPopout({
 
       {isExpanded && (
         <div className="metric-insight-body" ref={bodyRef}>
-          <div className="metric-insight-quick-actions">
-            {insight.quickActions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                className="metric-insight-action"
-                onClick={action.onRun}
-              >
-                <span>{action.label}</span>
-                <small>{action.impact}</small>
-              </button>
-            ))}
-          </div>
-
           <div className="metric-proof-grid" aria-label={t('ui.insights.beforeAfterProof')}>
             {insight.proofBlocks.map((proof) => (
               <div key={proof.id} className={`metric-proof-card ${getToneClass(proof.tone)}`}>
                 <span>{proof.label}</span>
                 <strong>{proof.delta}</strong>
               </div>
-            ))}
-          </div>
-
-          <div className="metric-jump-chips">
-            {insight.jumpChips.map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                className={`route-jump-chip${chip.active ? ' active' : ''}`}
-                onClick={chip.onJump}
-                aria-current={chip.active ? 'page' : undefined}
-              >
-                {chip.label}
-              </button>
             ))}
           </div>
         </div>
@@ -317,8 +250,6 @@ export function MetricExplainerModal({ isOpen, insight, onClose }: MetricExplain
     return [
       { id: 'what', title: t('ui.insights.explainer.what'), body: insight.explainer.what },
       { id: 'why-now', title: t('ui.insights.explainer.whyNow'), body: insight.explainer.whyNow },
-      { id: 'how-to-fix', title: t('ui.insights.explainer.howToFix'), body: insight.explainer.howToFix },
-      { id: 'how-to-verify', title: t('ui.insights.explainer.howToVerify'), body: insight.explainer.howToVerify },
     ];
   }, [insight, t]);
 
@@ -377,23 +308,6 @@ export function MetricExplainerModal({ isOpen, insight, onClose }: MetricExplain
               <p>{section.body}</p>
             </section>
           ))}
-
-          <section className="metric-explainer-section">
-            <h3>{t('ui.insights.fixNow')}</h3>
-            <div className="metric-insight-quick-actions">
-              {insight.quickActions.map((action) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  className="metric-insight-action"
-                  onClick={action.onRun}
-                >
-                  <span>{action.label}</span>
-                  <small>{action.impact}</small>
-                </button>
-              ))}
-            </div>
-          </section>
 
           <section className="metric-explainer-section">
             <h3>{t('ui.insights.beforeAfter')}</h3>

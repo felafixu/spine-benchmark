@@ -66,6 +66,7 @@ export interface WorkbenchContextValue {
   setRouteSelection: React.Dispatch<React.SetStateAction<RouteSelectionState>>;
   lastLoadError: string | null;
   clearLastLoadError: () => void;
+  setCanvasInteractionElement: (element: HTMLElement | null) => void;
 }
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);

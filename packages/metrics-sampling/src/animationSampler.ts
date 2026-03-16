@@ -153,8 +153,8 @@ export class AnimationSampler {
     callback: (animation: Animation, time: number, skeleton: any) => void,
     options: SamplingOptions = {}
   ): void {
-    const animations = spineInstance.skeleton.data.animations;
-    
+    const animations = spineInstance.skeleton?.data?.animations ?? [];
+
     animations.forEach(animation => {
       this.sampleAnimation(spineInstance, animation, (time, skeleton) => {
         callback(animation, time, skeleton);

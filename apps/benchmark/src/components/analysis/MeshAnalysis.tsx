@@ -76,16 +76,6 @@ export const MeshAnalysis: React.FC<MeshAnalysisProps> = ({ data }) => {
       </table>
 
       <GlobalMeshDetails data={data} />
-
-      <div className="analysis-notes">
-        <h4>{t('analysis.mesh.notes.title')}</h4>
-        <ul>
-          <li><strong>{t('analysis.mesh.notes.vertexCount')}</strong></li>
-          <li><strong>{t('analysis.mesh.notes.deformation', { factor: 1.5 })}</strong></li>
-          <li><strong>{t('analysis.mesh.notes.boneWeights', { factor: 2.0 })}</strong></li>
-          <li><strong>{t('analysis.mesh.notes.optimizationTip')}</strong></li>
-        </ul>
-      </div>
     </div>
   );
 };

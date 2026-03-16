@@ -14,34 +14,6 @@ export interface UsePixiAppOptions {
 let singletonApp: Application | null = null;
 let singletonInitPromise: Promise<Application> | null = null;
 
-/** Re-parent the singleton canvas into a new host and update resizeTo so it fills the container. */
-export function reparentPixiCanvas(container: HTMLElement): void {
-  if (!singletonApp) return;
-  if (!container.isConnected) return;
-
-  const needsParentMove = singletonApp.canvas.parentElement !== container;
-  const needsResizeTarget = singletonApp.resizeTo !== container;
-
-  if (needsParentMove) {
-    container.appendChild(singletonApp.canvas);
-  }
-
-  if (needsResizeTarget) {
-    singletonApp.resizeTo = container;
-  }
-
-  const targetWidth = Math.round(container.clientWidth);
-  const targetHeight = Math.round(container.clientHeight);
-  const sizeChanged =
-    targetWidth > 0 &&
-    targetHeight > 0 &&
-    (singletonApp.screen.width !== targetWidth || singletonApp.screen.height !== targetHeight);
-
-  if (sizeChanged) {
-    singletonApp.resize();
-  }
-}
-
 const parseBackgroundColor = (value: string): number => parseInt(value.replace('#', '0x'), 16);
 
 async function getOrCreateApp(container: HTMLDivElement, backgroundColor: string): Promise<Application> {
@@ -49,9 +21,7 @@ async function getOrCreateApp(container: HTMLDivElement, backgroundColor: string
     if (singletonApp.canvas.parentElement !== container) {
       container.appendChild(singletonApp.canvas);
     }
-    singletonApp.resizeTo = container;
     singletonApp.renderer.background.color = parseBackgroundColor(backgroundColor);
-    singletonApp.resize();
     return singletonApp;
   }
 
@@ -60,9 +30,7 @@ async function getOrCreateApp(container: HTMLDivElement, backgroundColor: string
     if (app.canvas.parentElement !== container) {
       container.appendChild(app.canvas);
     }
-    app.resizeTo = container;
     app.renderer.background.color = parseBackgroundColor(backgroundColor);
-    app.resize();
     return app;
   }
 
@@ -73,7 +41,6 @@ async function getOrCreateApp(container: HTMLDivElement, backgroundColor: string
       antialias: true,
       resolution: 2,
       autoDensity: true,
-      resizeTo: container,
     });
     app.canvas.id = 'pixiCanvas';
     container.appendChild(app.canvas);

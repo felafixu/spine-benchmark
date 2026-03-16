@@ -47,7 +47,7 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
 
   // Initialize animations list and set default animation
   useEffect(() => {
-    if (!spineInstance) return;
+    if (!spineInstance?.skeleton?.data) return;
 
     const animationNames = spineInstance.skeleton.data.animations.map(anim => anim.name);
     setAnimations(animationNames);
@@ -76,10 +76,14 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
 
   // Keep UI controls synchronized with external Spine state changes.
   useEffect(() => {
-    if (!spineInstance) return;
+    if (!spineInstance?.skeleton) return;
 
     let rafId = 0;
     const syncFromSpine = () => {
+      // Guard against accessing a destroyed spine instance between rAF ticks
+      // (disposal is synchronous but React effect cleanup is deferred).
+      if (!spineInstance.skeleton || !spineInstance.state) return;
+
       const entry = spineInstance.state.getCurrent(0);
       const activeAnimation = entry?.animation?.name ?? '';
       const activeSkin = spineInstance.skeleton.skin?.name ?? '';
@@ -187,7 +191,7 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
   };
   
   const switchSkin = (skinName: string) => {
-    if (!spineInstance) return;
+    if (!spineInstance?.skeleton?.data) return;
     const skin = spineInstance.skeleton.data.findSkin(skinName);
     if (skin) {
       spineInstance.skeleton.setSkin(skin);

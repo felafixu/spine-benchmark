@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { reparentPixiCanvas } from '../hooks/usePixiApp';
 
 const DEFAULT_VIEWPORT_BACKGROUND = '#efefec';
 const DEFAULT_MESH_HIGHLIGHT_COLOR = '#2dd4a8';
@@ -35,8 +34,9 @@ function clampLineWidth(value: number): number {
 
 export function OptionsRouteView() {
   const { t } = useTranslation();
+  const canvasSlotRef = useRef<HTMLDivElement>(null);
   const {
-    pixiContainerRef,
+    setCanvasInteractionElement,
     viewportBackground,
     setViewportBackground,
     meshHighlightColor,
@@ -46,10 +46,11 @@ export function OptionsRouteView() {
   } = useWorkbench();
 
   useEffect(() => {
-    if (pixiContainerRef.current) {
-      reparentPixiCanvas(pixiContainerRef.current);
+    if (canvasSlotRef.current) {
+      setCanvasInteractionElement(canvasSlotRef.current);
     }
-  }, [pixiContainerRef]);
+    return () => setCanvasInteractionElement(null);
+  }, [setCanvasInteractionElement]);
 
   const safeViewportBackground = normalizeHexColor(viewportBackground, DEFAULT_VIEWPORT_BACKGROUND);
   const safeMeshHighlightColor = normalizeHexColor(meshHighlightColor, DEFAULT_MESH_HIGHLIGHT_COLOR);
@@ -160,8 +161,7 @@ export function OptionsRouteView() {
         </section>
       </div>
 
-      <div className="options-canvas-parking" aria-hidden="true">
-        <div ref={pixiContainerRef} className="pixi-host" />
+      <div className="options-canvas-parking" aria-hidden="true" ref={canvasSlotRef}>
       </div>
     </div>
   );
