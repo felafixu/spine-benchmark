@@ -4,6 +4,7 @@ import { useWorkbench } from '../workbench/WorkbenchContext';
 import { ToolRouteControls } from '../components/ToolRouteControls';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
 import { RouteStateCallout } from '../components/insights/MetricInsightTools';
+import { AnimationControls } from '../components/AnimationControls';
 import { ThreeSliceViewer } from '../components/ThreeSliceViewer';
 import { useZSlice, SliceMode, BoneTreeNode } from '../hooks/useZSlice';
 import { Lock, Unlock, ChevronRight, ChevronDown, Layers, GitBranch, MousePointerClick } from 'lucide-react';
@@ -286,35 +287,43 @@ export function ZSliceRouteView() {
           )}
         </div>
 
-        {/* ── Right panel: Three.js 3D viewer ──────────────────────── */}
+        {/* ── Right panel: Three.js 3D viewer + animation controls ── */}
         <div
-          className="zslice-canvas"
+          className="zslice-canvas-area"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
         >
-          {spineInstance ? (
-            <ThreeSliceViewer
-              spine={spineInstance}
-              layers={layers}
-              layerSpacing={layerSpacing}
-              hoveredLayerId={hoveredLayerId}
-              isolatedLayerId={isolatedLayerId}
-              onHoverLayer={setHoveredLayerId}
-              onIsolateLayer={setIsolatedLayerId}
-            />
-          ) : (
-            !isAnyLoading && (
-              <div className="drop-area">
-                <p>{t('dashboard.workspace.dropArea')}</p>
-              </div>
-            )
-          )}
-          {isAnyLoading && (
-            <div className="loading-indicator">
-              <p>{loadingMessage}</p>
+          {spineInstance && (
+            <div className="zslice-anim-controls">
+              <AnimationControls spineInstance={spineInstance} />
             </div>
           )}
+
+          <div className="zslice-canvas">
+            {spineInstance ? (
+              <ThreeSliceViewer
+                spine={spineInstance}
+                layers={layers}
+                layerSpacing={layerSpacing}
+                hoveredLayerId={hoveredLayerId}
+                isolatedLayerId={isolatedLayerId}
+                onHoverLayer={setHoveredLayerId}
+                onIsolateLayer={setIsolatedLayerId}
+              />
+            ) : (
+              !isAnyLoading && (
+                <div className="drop-area">
+                  <p>{t('dashboard.workspace.dropArea')}</p>
+                </div>
+              )
+            )}
+            {isAnyLoading && (
+              <div className="loading-indicator">
+                <p>{loadingMessage}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

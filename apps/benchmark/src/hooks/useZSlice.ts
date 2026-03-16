@@ -83,7 +83,7 @@ function buildBoneTree(spine: Spine): BoneTreeNode {
       bone,
       children,
       directSlots: slotsByBone.get(bone.data.name) ?? [],
-      locked: false,
+      locked: true, // default locked to avoid FPS loss from too many layers
     };
   }
 
@@ -91,7 +91,11 @@ function buildBoneTree(spine: Spine): BoneTreeNode {
   if (!root) {
     return { name: 'root', depth: 0, bone: null as any, children: [], directSlots: [], locked: false };
   }
-  return buildNode(root, 0);
+  const tree = buildNode(root, 0);
+  // Unlock the root so its children form separate locked groups;
+  // if root were locked the entire skeleton collapses into one layer.
+  tree.locked = false;
+  return tree;
 }
 
 function collectSlotsFromSubtree(node: BoneTreeNode): SliceSlotInfo[] {

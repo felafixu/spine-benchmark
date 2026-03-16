@@ -7410,9 +7410,22 @@ select:focus,
   min-height: 0;
 }
 
+.zslice-canvas-area {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.zslice-anim-controls {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--sb-border);
+  background: var(--sb-bg-1);
+}
+
 .zslice-canvas {
   position: relative;
-  display: block;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
   background: #1a1a2e;
