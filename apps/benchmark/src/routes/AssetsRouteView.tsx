@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { AnimationControls } from '../components/AnimationControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
@@ -53,17 +52,15 @@ export function AssetsRouteView() {
       <RouteHeaderCard
         title={t('dashboard.sections.assetLibrary')}
         subtitle={t('assets.subtitle')}
-      />
-
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={setSelectedAssetId}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId,
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
       <div className="assets-layout">

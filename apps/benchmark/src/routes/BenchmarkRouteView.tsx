@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimationControls } from '../components/AnimationControls';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { getStatColor } from '../core/utils/colorUtils';
 import { worstRenderingImpact, worstComputationalImpact } from '../core/utils/scoreCalculator';
@@ -97,16 +96,15 @@ export function BenchmarkRouteView() {
       <RouteHeaderCard
         title={t('dashboard.tools.benchmark')}
         subtitle={t('benchmark.subtitle')}
-      />
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={(id) => setSelectedAssetId(id)}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId: (id) => setSelectedAssetId(id),
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
       <div className="benchmark-inspector-layout">

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { AnimationControls } from '../components/AnimationControls';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { useDrawCallInspector, LiveSlotInfo } from '../hooks/useDrawCallInspector';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { getStatColor } from '../core/utils/colorUtils';
@@ -198,16 +197,15 @@ export function DrawCallInspectorRouteView() {
       <RouteHeaderCard
         title={t('dashboard.tools.drawCallInspector')}
         subtitle={t('drawCallInspector.subtitle')}
-      />
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={(id) => setSelectedAssetId(id)}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId: (id) => setSelectedAssetId(id),
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
       <div className="dc-inspector-layout">

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { AnimationControls } from '../components/AnimationControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { useAnimationHeatmap, FrameMetrics, AnimationHeatmapData } from '../hooks/useAnimationHeatmap';
 import { LiveSlotInfo } from '../hooks/useDrawCallInspector';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
@@ -491,16 +490,15 @@ export function AnimationHeatmapRouteView() {
       <RouteHeaderCard
         title={t('dashboard.tools.animationHeatmap')}
         subtitle={t('animationHeatmap.subtitle')}
-      />
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={(id) => setSelectedAssetId(id)}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId: (id) => setSelectedAssetId(id),
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
       <div className="benchmark-inspector-layout heatmap-layout">

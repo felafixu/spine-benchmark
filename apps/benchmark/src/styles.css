@@ -5646,6 +5646,35 @@ select:focus,
   outline-offset: 1px;
 }
 
+.route-header-chip-asset {
+  cursor: pointer;
+  gap: 6px;
+  max-width: min(280px, 36vw);
+  transition: border-color var(--sb-duration) var(--sb-ease), background var(--sb-duration) var(--sb-ease);
+}
+
+.route-header-chip-asset:hover {
+  border-color: #d9d1c7;
+  background: #f0ede8;
+}
+
+.route-header-chip-asset:focus-visible {
+  outline: 2px solid #7c9082;
+  outline-offset: 1px;
+}
+
+.route-header-chip-asset span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-header-chip-icon {
+  flex: 0 0 13px;
+  color: #8a8a8a;
+}
+
 .route-header-chip-kbd {
   color: #8a8a8a;
 }

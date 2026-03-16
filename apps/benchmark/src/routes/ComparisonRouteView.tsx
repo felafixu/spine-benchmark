@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { animate } from 'animejs';
 import { useTranslation } from 'react-i18next';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
 import { CheckIcon, ChevronDownIcon } from '../components/Icons';
@@ -290,16 +289,15 @@ export function ComparisonRouteView() {
       <RouteHeaderCard
         title={t('dashboard.tools.comparison')}
         subtitle={t('comparison.subtitle')}
-      />
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={(id) => setSelectedAssetId(id)}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handleToolbarPick}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId: (id) => setSelectedAssetId(id),
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handleToolbarPick,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
       <div className="comparison-layout comparison-layout-editorial" ref={comparisonRootRef}>
