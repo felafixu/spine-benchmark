@@ -910,7 +910,7 @@ const App: React.FC = () => {
           type="button"
           className="sidebar-expand-fab"
           onClick={() => setSidebarCollapsed(false)}
-          aria-label={t('ui.expandSidebar')}
+          aria-label={t('dashboard.actions.expandSidebar')}
         >
           <ChevronRight size={16} />
         </button>
