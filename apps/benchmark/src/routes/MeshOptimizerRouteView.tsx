@@ -16,7 +16,6 @@ import {
   MetricExplainerModal,
   MetricInsightModel,
   MetricInsightPopout,
-  RouteJumpStrip,
   RouteStateCallout,
 } from '../components/insights/MetricInsightTools';
 
