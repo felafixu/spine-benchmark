@@ -125,7 +125,7 @@ export function analyzeSingleAnimation(
  * @returns Array of AnimationAnalysis objects
  */
 export function analyzeAnimations(spineInstance: Spine): AnimationAnalysis[] {
-  const animations = spineInstance.skeleton.data.animations;
+  const animations = spineInstance.skeleton?.data?.animations ?? [];
   const animationAnalyses: AnimationAnalysis[] = [];
 
   animations.forEach((animation) => {
@@ -174,9 +174,9 @@ export function aggregateResults(
   statistics: AnalysisStatistics
 ): SpineAnalysisResult {
   return {
-    skeletonName: spineInstance.skeleton.data.name || 'Unnamed',
-    totalAnimations: spineInstance.skeleton.data.animations.length,
-    totalSkins: spineInstance.skeleton.data.skins.length,
+    skeletonName: spineInstance.skeleton?.data?.name || 'Unnamed',
+    totalAnimations: spineInstance.skeleton?.data?.animations?.length ?? 0,
+    totalSkins: spineInstance.skeleton?.data?.skins?.length ?? 0,
     skeleton: skeletonData,
     animations: animationData,
     globalMesh: globalData.globalMesh,

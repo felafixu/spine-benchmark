@@ -69,15 +69,6 @@ export const BlendModeAnalysis: React.FC<BlendModeAnalysisProps> = ({ data }) =>
 
       <GlobalBlendModeDetails data={data} />
 
-      <div className="analysis-notes">
-        <h4>{t('analysis.blendMode.notes.title')}</h4>
-        <ul>
-          <li><strong>{t('analysis.blendMode.notes.frameByFrameTitle')}:</strong> {t('analysis.blendMode.notes.frameByFrameDescription')}</li>
-          <li><strong>{t('analysis.blendMode.notes.impactTitle')}:</strong> {t('analysis.blendMode.notes.impactDescription')}</li>
-          <li><strong>{t('analysis.blendMode.notes.concurrentTitle')}:</strong> {t('analysis.blendMode.notes.concurrentDescription')}</li>
-          <li><strong>{t('analysis.blendMode.notes.optimizationTitle')}:</strong> {t('analysis.blendMode.notes.optimizationDescription')}</li>
-        </ul>
-      </div>
     </div>
   );
 };

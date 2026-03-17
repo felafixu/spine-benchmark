@@ -1,13 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { AnimationControls } from '../components/AnimationControls';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { useMeshInspector, captureMeshData, MeshSlotInfo } from '../hooks/useMeshInspector';
 import { useDrawCallInspector } from '../hooks/useDrawCallInspector';
-import { reparentPixiCanvas } from '../hooks/usePixiApp';
 import { assetToFiles } from '../core/storage/assetStore';
 import { optimizeJson, OptimizationReport } from '../core/meshOptimizer';
 import { renderMeshPreview, MeshPreviewResult } from '../core/meshPreviewRenderer';
@@ -18,7 +16,6 @@ import {
   MetricExplainerModal,
   MetricInsightModel,
   MetricInsightPopout,
-  RouteJumpStrip,
   RouteStateCallout,
 } from '../components/insights/MetricInsightTools';
 
@@ -42,6 +39,7 @@ export function MeshOptimizerRouteView() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
+  const canvasSlotRef = useRef<HTMLDivElement>(null);
   const {
     spineInstance,
     urlLoadStatus,
@@ -50,7 +48,7 @@ export function MeshOptimizerRouteView() {
     handleDrop,
     handleDragOver,
     handleDragLeave,
-    pixiContainerRef,
+    setCanvasInteractionElement,
     assets,
     selectedAssetId,
     setSelectedAssetId,
@@ -80,10 +78,11 @@ export function MeshOptimizerRouteView() {
   const [filterMode, setFilterMode] = useState<MeshFilterMode>('all');
 
   useEffect(() => {
-    if (pixiContainerRef.current) {
-      reparentPixiCanvas(pixiContainerRef.current);
+    if (canvasSlotRef.current) {
+      setCanvasInteractionElement(canvasSlotRef.current);
     }
-  }, [pixiContainerRef]);
+    return () => setCanvasInteractionElement(null);
+  }, [setCanvasInteractionElement]);
 
   useEffect(() => {
     toggleMeshes(true);
@@ -289,35 +288,6 @@ export function MeshOptimizerRouteView() {
     void activateMesh(activeMesh);
   }, [activeMesh, activateMesh]);
 
-  const jumpChips = useMemo(() => [
-    {
-      id: 'draw-route',
-      label: t('ui.routeJumps.drawCalls'),
-      active: false,
-      onSelect: () => {
-        void navigate({ to: '/tools/draw-call-inspector' });
-      },
-    },
-    {
-      id: 'mesh-route',
-      label: t('ui.routeJumps.mesh'),
-      active: true,
-      onSelect: () => {},
-    },
-    {
-      id: 'atlas-route',
-      label: t('ui.routeJumps.atlas'),
-      active: false,
-      onSelect: () => {
-        void navigate({ to: '/tools/atlas-repack' });
-      },
-    },
-  ], [navigate, t]);
-
-  const selectionHint = routeSelection.attachmentName
-    ? t('ui.routeJumps.selectionRetainedNamed', { name: routeSelection.attachmentName })
-    : t('ui.routeJumps.selectionRetained');
-
   const meshInsight = useMemo<MetricInsightModel | null>(() => {
     if (!activeMesh) return null;
     const atlasPage = atlasPageBySlotIndex.get(activeMesh.index) ?? 'unknown';
@@ -359,68 +329,10 @@ export function MeshOptimizerRouteView() {
           tone: activeMesh.boneCount > 0 ? 'info' : 'neutral',
         },
       ],
-      quickActions: [
-        {
-          id: 'filter-deformed',
-          label: t('meshOptimizer.insight.quickActions.filterDeformed.label'),
-          impact: t('meshOptimizer.insight.quickActions.filterDeformed.impact'),
-          onRun: () => {
-            setFilterMode('deformed');
-          },
-        },
-        {
-          id: 'isolate-mesh',
-          label: t('meshOptimizer.insight.quickActions.isolateMesh.label'),
-          impact: t('meshOptimizer.insight.quickActions.isolateMesh.impact'),
-          onRun: () => {
-            setSelectedMeshIndex(activeMesh.index);
-            setHighlightedMeshSlot(activeMesh.slotName);
-            setSlotHighlight(activeMesh.index);
-          },
-        },
-        {
-          id: 'atlas-grouping',
-          label: t('meshOptimizer.insight.quickActions.sendAtlasHint.label'),
-          impact: t('meshOptimizer.insight.quickActions.sendAtlasHint.impact'),
-          onRun: () => {
-            setRouteSelection({
-              sourceRoute: 'mesh-optimizer',
-              slotIndex: activeMesh.index,
-              slotName: activeMesh.slotName,
-              attachmentName: activeMesh.attachmentName,
-              atlasPage,
-              updatedAt: Date.now(),
-            });
-            void navigate({ to: '/tools/atlas-repack' });
-          },
-        },
-      ],
       proofBlocks: [
         { id: 'proof-calls', label: t('ui.insights.proof.calls'), delta: expectedCallDelta, tone: 'positive' },
         { id: 'proof-verts', label: t('ui.insights.proof.verts'), delta: `-${vertexDropPercent}%`, tone: 'info' },
         { id: 'proof-breaks', label: t('ui.insights.proof.breaks'), delta: expectedBreakDelta, tone: 'positive' },
-      ],
-      jumpChips: [
-        {
-          id: 'jump-draw',
-          label: t('ui.routeJumps.drawCalls'),
-          onJump: () => {
-            void navigate({ to: '/tools/draw-call-inspector' });
-          },
-        },
-        {
-          id: 'jump-mesh',
-          label: t('ui.routeJumps.mesh'),
-          active: true,
-          onJump: () => {},
-        },
-        {
-          id: 'jump-atlas',
-          label: t('ui.routeJumps.atlas'),
-          onJump: () => {
-            void navigate({ to: '/tools/atlas-repack' });
-          },
-        },
       ],
       explainer: {
         what: t('meshOptimizer.insight.explainer.what', {
@@ -431,8 +343,6 @@ export function MeshOptimizerRouteView() {
         whyNow: activeMesh.vertexCount > 180
           ? t('meshOptimizer.insight.explainer.whyNowHigh')
           : t('meshOptimizer.insight.explainer.whyNowHeadroom'),
-        howToFix: t('meshOptimizer.insight.explainer.howToFix'),
-        howToVerify: t('meshOptimizer.insight.explainer.howToVerify'),
       },
     };
   }, [activeMesh, atlasPageBySlotIndex, navigate, setHighlightedMeshSlot, setSlotHighlight, setRouteSelection, t]);
@@ -450,22 +360,19 @@ export function MeshOptimizerRouteView() {
       <RouteHeaderCard
         title={t('dashboard.tools.meshOptimizer')}
         subtitle={t('meshOptimizer.subtitle')}
-      />
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={(id) => setSelectedAssetId(id)}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId: (id) => setSelectedAssetId(id),
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
-      <div className="mesh-inspector-layout with-side-insight">
+      <div className="mesh-inspector-layout">
         <div className="tool-panel mesh-inspector-panel">
-          <RouteJumpStrip chips={jumpChips} selectionHint={selectionHint} />
-
           {lastLoadError && (
             <RouteStateCallout
               kind="error"
@@ -747,13 +654,13 @@ export function MeshOptimizerRouteView() {
 
         <div className="tool-canvas">
           <div
+            ref={canvasSlotRef}
             className="canvas-container"
             data-tour="canvas-dropzone"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <div ref={pixiContainerRef} className="pixi-host" />
             <div className="canvas-grid-overlay" />
             <CanvasStatsOverlay spineInstance={spineInstance} />
 
@@ -774,33 +681,7 @@ export function MeshOptimizerRouteView() {
             {spineInstance && <AnimationControls spineInstance={spineInstance} />}
           </div>
         </div>
-
-        <aside className="tool-info-panel">
-          <div className="tool-info-scroll">
-            {meshInsight ? (
-              <MetricInsightPopout
-                insight={meshInsight}
-                isPinned={selectedMeshIndex !== null}
-                onPin={pinActiveInsight}
-                onUnpin={closeInsight}
-                onOpenExplainer={() => setShowExplainer(true)}
-                onRequestClose={closeInsight}
-              />
-            ) : (
-              <div className="tool-info-empty">
-                <h3>{t('meshOptimizer.infoPanel.emptyTitle')}</h3>
-                <p>{t('meshOptimizer.infoPanel.emptyDescription')}</p>
-              </div>
-            )}
-          </div>
-        </aside>
       </div>
-
-      <MetricExplainerModal
-        isOpen={showExplainer}
-        insight={meshInsight}
-        onClose={() => setShowExplainer(false)}
-      />
     </div>
   );
 }

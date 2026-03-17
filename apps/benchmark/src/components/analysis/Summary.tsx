@@ -340,32 +340,6 @@ export const Summary: React.FC<SummaryProps> = ({ data, supplemental }) => {
         </table>
       </div>
 
-      <section className="impact-advisor-panel">
-        <h3>{t('analysis.summary.advisor.title')}</h3>
-        <div className="impact-advisor-list">
-          {report.advisor.map((item) => (
-            <article
-              key={item.id}
-              className={`impact-advisor-card impact-advisor-${item.severity}`}
-            >
-              <div className="impact-advisor-header">
-                <strong>{t(item.titleKey, item.params)}</strong>
-                <span className="impact-advisor-severity">
-                  {t(`analysis.summary.advisor.severity.${item.severity}`)}
-                </span>
-              </div>
-              <p>{t(item.bodyKey, item.params)}</p>
-              {item.affectedAnimations.length > 0 && (
-                <small>
-                  {t('analysis.summary.advisor.affectedAnimations', {
-                    names: item.affectedAnimations.join(', '),
-                  })}
-                </small>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
     </div>
   );
 };

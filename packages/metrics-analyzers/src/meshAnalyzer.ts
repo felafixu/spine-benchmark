@@ -119,7 +119,7 @@ export function analyzeMeshesForAnimation(
  */
 export function analyzeGlobalMeshes(spineInstance: Spine): GlobalMeshAnalysis {
   const skeleton = spineInstance.skeleton;
-  const animations = spineInstance.skeleton.data.animations;
+  const animations = spineInstance.skeleton?.data?.animations ?? [];
 
   let totalMeshCount = 0;
   let totalVertices = 0;

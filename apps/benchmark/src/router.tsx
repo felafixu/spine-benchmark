@@ -17,6 +17,7 @@ import { DrawCallInspectorRouteView } from './routes/DrawCallInspectorRouteView'
 import { AtlasRepackRouteView } from './routes/AtlasRepackRouteView';
 import { ComparisonRouteView } from './routes/ComparisonRouteView';
 import { AnimationHeatmapRouteView } from './routes/AnimationHeatmapRouteView';
+import { ZSliceRouteView } from './routes/ZSliceRouteView';
 import { OptionsRouteView } from './routes/OptionsRouteView';
 
 const rootRoute = createRootRoute({
@@ -84,6 +85,12 @@ const animationHeatmapRoute = createRoute({
   component: AnimationHeatmapRouteView,
 });
 
+const zSliceRoute = createRoute({
+  getParentRoute: () => toolsLayoutRoute,
+  path: '/z-slice',
+  component: ZSliceRouteView,
+});
+
 const assetsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/assets',
@@ -118,6 +125,7 @@ const routeTree = rootRoute.addChildren([
     atlasRepackRoute,
     comparisonRoute,
     animationHeatmapRoute,
+    zSliceRoute,
   ]),
   assetsRoute,
   documentationRoute,

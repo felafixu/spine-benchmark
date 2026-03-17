@@ -4,10 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { AnimationControls } from '../components/AnimationControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { useAnimationHeatmap, FrameMetrics, AnimationHeatmapData } from '../hooks/useAnimationHeatmap';
 import { LiveSlotInfo } from '../hooks/useDrawCallInspector';
-import { reparentPixiCanvas } from '../hooks/usePixiApp';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
 
 type MetricKey = 'renderingImpact' | 'computationalImpact';
@@ -339,7 +337,7 @@ function computeRange(frames: FrameMetrics[], key: keyof FrameMetrics): MetricRa
   return { min, max, avg: Math.round(avg * 10) / 10 };
 }
 
-function AnimationHeatmapPanel({ animData, isSelected, onSelect }: { animData: AnimationHeatmapData; isSelected: boolean; onSelect: () => void }) {
+function AnimationHeatmapPanel({ animData }: { animData: AnimationHeatmapData }) {
   const { t } = useTranslation();
   const [hoveredFrame, setHoveredFrame] = useState<number | null>(null);
   const [selectedFrame, setSelectedFrame] = useState<number | null>(null);
@@ -353,8 +351,8 @@ function AnimationHeatmapPanel({ animData, isSelected, onSelect }: { animData: A
   }, [animData.frames]);
 
   return (
-    <div className={`heatmap-animation-panel${isSelected ? ' expanded' : ''}`}>
-      <button type="button" className="heatmap-animation-header" onClick={onSelect}>
+    <div className="heatmap-animation-panel expanded">
+      <div className="heatmap-animation-header">
         <span className="heatmap-animation-name">{animData.animationName}</span>
         <span className="heatmap-animation-meta">
           {t('animationHeatmap.animationMeta', {
@@ -362,45 +360,43 @@ function AnimationHeatmapPanel({ animData, isSelected, onSelect }: { animData: A
             frames: animData.frames.length,
           })}
         </span>
-      </button>
+      </div>
 
-      {isSelected && (
-        <div className="heatmap-animation-body">
-          {/* Legend */}
-          <div className="perf-chart-legend">
-            {METRICS.map((m) => (
-              <span key={m.key} className="perf-chart-legend-item">
-                <span className="perf-chart-legend-swatch" style={{ background: m.color }} />
-                {t('animationHeatmap.legend.metricRange', {
-                  label: t(m.labelKey),
-                  min: formatMetricValue(m.key, ranges[m.key].min),
-                  max: formatMetricValue(m.key, ranges[m.key].max),
-                  avg: formatMetricValue(m.key, ranges[m.key].avg),
-                })}
-              </span>
-            ))}
-          </div>
-
-          {/* Chart */}
-          <MetricChart
-            frames={animData.frames}
-            hoveredFrame={hoveredFrame}
-            selectedFrame={selectedFrame}
-            onHoverFrame={setHoveredFrame}
-            onClickFrame={setSelectedFrame}
-          />
-
-          {/* Tooltip on hover */}
-          {hoveredFrame !== null && animData.frames[hoveredFrame] && (
-            <ChartTooltip frame={animData.frames[hoveredFrame]} index={hoveredFrame} />
-          )}
-
-          {/* Frame detail on click */}
-          {selectedFrame !== null && animData.frames[selectedFrame] && (
-            <FrameDetail frame={animData.frames[selectedFrame]} index={selectedFrame} />
-          )}
+      <div className="heatmap-animation-body">
+        {/* Legend */}
+        <div className="perf-chart-legend">
+          {METRICS.map((m) => (
+            <span key={m.key} className="perf-chart-legend-item">
+              <span className="perf-chart-legend-swatch" style={{ background: m.color }} />
+              {t('animationHeatmap.legend.metricRange', {
+                label: t(m.labelKey),
+                min: formatMetricValue(m.key, ranges[m.key].min),
+                max: formatMetricValue(m.key, ranges[m.key].max),
+                avg: formatMetricValue(m.key, ranges[m.key].avg),
+              })}
+            </span>
+          ))}
         </div>
-      )}
+
+        {/* Chart */}
+        <MetricChart
+          frames={animData.frames}
+          hoveredFrame={hoveredFrame}
+          selectedFrame={selectedFrame}
+          onHoverFrame={setHoveredFrame}
+          onClickFrame={setSelectedFrame}
+        />
+
+        {/* Tooltip on hover */}
+        {hoveredFrame !== null && animData.frames[hoveredFrame] && (
+          <ChartTooltip frame={animData.frames[hoveredFrame]} index={hoveredFrame} />
+        )}
+
+        {/* Frame detail on click */}
+        {selectedFrame !== null && animData.frames[selectedFrame] && (
+          <FrameDetail frame={animData.frames[selectedFrame]} index={selectedFrame} />
+        )}
+      </div>
     </div>
   );
 }
@@ -408,8 +404,8 @@ function AnimationHeatmapPanel({ animData, isSelected, onSelect }: { animData: A
 export function AnimationHeatmapRouteView() {
   const { t } = useTranslation();
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
-  const [selectedAnimIndex, setSelectedAnimIndex] = useState<number>(0);
   const autoAnalyzedSpineRef = useRef<Spine | null>(null);
+  const canvasSlotRef = useRef<HTMLDivElement>(null);
   const {
     spineInstance,
     urlLoadStatus,
@@ -418,7 +414,7 @@ export function AnimationHeatmapRouteView() {
     handleDrop,
     handleDragOver,
     handleDragLeave,
-    pixiContainerRef,
+    setCanvasInteractionElement,
     assets,
     selectedAssetId,
     setSelectedAssetId,
@@ -428,17 +424,13 @@ export function AnimationHeatmapRouteView() {
   } = useWorkbench();
 
   useEffect(() => {
-    if (pixiContainerRef.current) {
-      reparentPixiCanvas(pixiContainerRef.current);
+    if (canvasSlotRef.current) {
+      setCanvasInteractionElement(canvasSlotRef.current);
     }
-  }, [pixiContainerRef]);
+    return () => setCanvasInteractionElement(null);
+  }, [setCanvasInteractionElement]);
 
   const { data, isAnalyzing, analyze } = useAnimationHeatmap(spineInstance);
-
-  // Reset selection when data changes
-  useEffect(() => {
-    setSelectedAnimIndex(0);
-  }, [data]);
 
   // Auto-run heatmap analysis once per loaded spine.
   useEffect(() => {
@@ -457,7 +449,7 @@ export function AnimationHeatmapRouteView() {
       if (cancelled) return;
 
       const isMountedToStage = Boolean(spineInstance.parent);
-      const hasAnimations = spineInstance.skeleton.data.animations.length > 0;
+      const hasAnimations = (spineInstance.skeleton?.data?.animations?.length ?? 0) > 0;
       const hasTrack = Boolean(spineInstance.state.getCurrent(0)?.animation);
       const isReady = isMountedToStage && (!hasAnimations || hasTrack);
 
@@ -498,16 +490,15 @@ export function AnimationHeatmapRouteView() {
       <RouteHeaderCard
         title={t('dashboard.tools.animationHeatmap')}
         subtitle={t('animationHeatmap.subtitle')}
-      />
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={(id) => setSelectedAssetId(id)}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId: (id) => setSelectedAssetId(id),
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
       <div className="benchmark-inspector-layout heatmap-layout">
@@ -517,12 +508,10 @@ export function AnimationHeatmapRouteView() {
             <>
               {data.length > 0 ? (
                 <div className="heatmap-results">
-                  {data.map((animData, i) => (
+                  {data.map((animData) => (
                     <AnimationHeatmapPanel
                       key={animData.animationName}
                       animData={animData}
-                      isSelected={selectedAnimIndex === i}
-                      onSelect={() => setSelectedAnimIndex(i)}
                     />
                   ))}
                 </div>
@@ -549,13 +538,13 @@ export function AnimationHeatmapRouteView() {
         {/* Right side - canvas + animation controls */}
         <div className="tool-canvas">
           <div
+            ref={canvasSlotRef}
             className="canvas-container"
             data-tour="canvas-dropzone"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <div ref={pixiContainerRef} className="pixi-host" />
             <div className="canvas-grid-overlay" />
             <CanvasStatsOverlay spineInstance={spineInstance} />
 

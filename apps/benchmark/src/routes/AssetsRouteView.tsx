@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { AnimationControls } from '../components/AnimationControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
-import { reparentPixiCanvas } from '../hooks/usePixiApp';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
 
 export function AssetsRouteView() {
   const { t } = useTranslation();
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
+  const canvasSlotRef = useRef<HTMLDivElement>(null);
   const {
     spineInstance,
     urlLoadStatus,
@@ -18,7 +17,7 @@ export function AssetsRouteView() {
     handleDrop,
     handleDragOver,
     handleDragLeave,
-    pixiContainerRef,
+    setCanvasInteractionElement,
     assets,
     selectedAssetId,
     setSelectedAssetId,
@@ -30,10 +29,11 @@ export function AssetsRouteView() {
   } = useWorkbench();
 
   useEffect(() => {
-    if (pixiContainerRef.current) {
-      reparentPixiCanvas(pixiContainerRef.current);
+    if (canvasSlotRef.current) {
+      setCanvasInteractionElement(canvasSlotRef.current);
     }
-  }, [pixiContainerRef]);
+    return () => setCanvasInteractionElement(null);
+  }, [setCanvasInteractionElement]);
 
   const handlePickAsset = async (assetId: string) => {
     const asset = assets.find((entry) => entry.id === assetId);
@@ -52,17 +52,15 @@ export function AssetsRouteView() {
       <RouteHeaderCard
         title={t('dashboard.sections.assetLibrary')}
         subtitle={t('assets.subtitle')}
-      />
-
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={setSelectedAssetId}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId,
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
       <div className="assets-layout">
@@ -118,13 +116,13 @@ export function AssetsRouteView() {
       {/* Right panel - live spine preview */}
       <div className="tool-canvas assets-canvas">
         <div
+          ref={canvasSlotRef}
           className="canvas-container"
           data-tour="canvas-dropzone"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
         >
-          <div ref={pixiContainerRef} className="pixi-host" />
           <div className="canvas-grid-overlay" />
           <CanvasStatsOverlay spineInstance={spineInstance} />
 

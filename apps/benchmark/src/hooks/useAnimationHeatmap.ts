@@ -156,7 +156,7 @@ export function useAnimationHeatmap(spineInstance: Spine | null): UseAnimationHe
       targetSpine.visible = false;
 
       try {
-        const animations = targetSpine.skeleton.data.animations;
+        const animations = targetSpine.skeleton?.data?.animations ?? [];
         const results: AnimationHeatmapData[] = [];
 
         for (const animation of animations) {

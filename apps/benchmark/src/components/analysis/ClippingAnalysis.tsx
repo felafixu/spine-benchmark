@@ -66,16 +66,6 @@ export const ClippingAnalysis: React.FC<ClippingAnalysisProps> = ({ data }) => {
 
       <GlobalClippingDetails data={data} />
 
-      <div className="analysis-notes">
-        <h4>{t('analysis.clipping.notes.title')}</h4>
-        <ul>
-          <li><strong>{t('analysis.clipping.notes.highImpact')}</strong></li>
-          <li><strong>{t('analysis.clipping.notes.vertexCount')}</strong></li>
-          <li><strong>{t('analysis.clipping.notes.optimalConfiguration')}</strong></li>
-          <li><strong>{t('analysis.clipping.notes.gpuCost')}</strong></li>
-          <li><strong>{t('analysis.clipping.notes.recommendation')}</strong></li>
-        </ul>
-      </div>
     </div>
   );
 };

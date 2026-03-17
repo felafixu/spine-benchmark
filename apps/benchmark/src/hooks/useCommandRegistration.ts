@@ -73,7 +73,7 @@ export function useCommandRegistration({
         }
       });
 
-      const skins = spineInstance.skeleton.data.skins as Array<{ name: string }>;
+      const skins = (spineInstance.skeleton?.data?.skins ?? []) as Array<{ name: string }>;
       skins.forEach((skin: { name: string }) => {
         commandRegistry.register({
           id: `skin.${skin.name}`,
@@ -82,7 +82,7 @@ export function useCommandRegistration({
           description: tIndexed(t, 'commands.skin.switchToDescription', [skin.name]),
           keywords: [t('commands.keywords.skin'), skin.name.toLowerCase()],
           execute: () => {
-            const targetSkin = spineInstance.skeleton.data.skins.find((entry: any) => entry.name === skin.name);
+            const targetSkin = spineInstance.skeleton?.data?.skins?.find((entry: any) => entry.name === skin.name);
             if (targetSkin) {
               spineInstance.skeleton.setSkin(targetSkin as any);
               spineInstance.skeleton.setSlotsToSetupPose();
@@ -433,7 +433,7 @@ export function useCommandRegistration({
 
       commandIds.forEach(id => commandRegistry.unregister(id));
       // Unregister skin commands
-      if (spineInstance) {
+      if (spineInstance?.skeleton?.data) {
         const skins = spineInstance.skeleton.data.skins;
         skins.forEach((skin: any) => {
           commandRegistry.unregister(`skin.${skin.name}`);

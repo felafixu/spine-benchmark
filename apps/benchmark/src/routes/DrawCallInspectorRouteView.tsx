@@ -1,19 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { AnimationControls } from '../components/AnimationControls';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { useDrawCallInspector, LiveSlotInfo } from '../hooks/useDrawCallInspector';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
-import { reparentPixiCanvas } from '../hooks/usePixiApp';
 import { getStatColor } from '../core/utils/colorUtils';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
 import {
-  MetricExplainerModal,
-  MetricInsightModel,
-  MetricInsightPopout,
-  RouteJumpStrip,
   RouteStateCallout,
 } from '../components/insights/MetricInsightTools';
 
@@ -47,6 +41,7 @@ export function DrawCallInspectorRouteView() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
+  const canvasSlotRef = useRef<HTMLDivElement>(null);
   const {
     spineInstance,
     urlLoadStatus,
@@ -55,7 +50,7 @@ export function DrawCallInspectorRouteView() {
     handleDrop,
     handleDragOver,
     handleDragLeave,
-    pixiContainerRef,
+    setCanvasInteractionElement,
     assets,
     selectedAssetId,
     setSelectedAssetId,
@@ -74,13 +69,13 @@ export function DrawCallInspectorRouteView() {
   const [hoveredSlotIndex, setHoveredSlotIndex] = useState<number | null>(null);
   const [hideInvisible, setHideInvisible] = useState(false);
   const [atlasPageFilter, setAtlasPageFilter] = useState<string | null>(null);
-  const [showExplainer, setShowExplainer] = useState(false);
 
   useEffect(() => {
-    if (pixiContainerRef.current) {
-      reparentPixiCanvas(pixiContainerRef.current);
+    if (canvasSlotRef.current) {
+      setCanvasInteractionElement(canvasSlotRef.current);
     }
-  }, [pixiContainerRef]);
+    return () => setCanvasInteractionElement(null);
+  }, [setCanvasInteractionElement]);
 
   useEffect(() => {
     return () => {
@@ -154,35 +149,6 @@ export function DrawCallInspectorRouteView() {
   const isPartialParse = !!spineInstance && snapshot.slots.length > 0 && hasUnknownPages;
   const hasEmptyData = !!spineInstance && snapshot.slots.length === 0;
 
-  const jumpChips = useMemo(() => [
-    {
-      id: 'draw-route',
-      label: t('ui.routeJumps.drawCalls'),
-      active: true,
-      onSelect: () => {},
-    },
-    {
-      id: 'mesh-route',
-      label: t('ui.routeJumps.mesh'),
-      active: false,
-      onSelect: () => {
-        void navigate({ to: '/tools/mesh-optimizer' });
-      },
-    },
-    {
-      id: 'atlas-route',
-      label: t('ui.routeJumps.atlas'),
-      active: false,
-      onSelect: () => {
-        void navigate({ to: '/tools/atlas-repack' });
-      },
-    },
-  ], [navigate, t]);
-
-  const selectionHint = routeSelection.attachmentName
-    ? t('ui.routeJumps.selectionRetainedNamed', { name: routeSelection.attachmentName })
-    : t('ui.routeJumps.selectionRetained');
-
   const handleSlotClick = useCallback((slot: LiveSlotInfo) => {
     if (selectedSlotIndex === slot.index) {
       setSelectedSlotIndex(null);
@@ -200,145 +166,6 @@ export function DrawCallInspectorRouteView() {
       updatedAt: Date.now(),
     });
   }, [selectedSlotIndex, setSlotHighlight, setRouteSelection]);
-
-  const closeInsight = useCallback(() => {
-    setHoveredSlotIndex(null);
-    setSelectedSlotIndex(null);
-    setSlotHighlight(null);
-    setShowExplainer(false);
-  }, [setSlotHighlight]);
-
-  const pinActiveInsight = useCallback(() => {
-    if (!activeSlot) return;
-    setSelectedSlotIndex(activeSlot.index);
-    setSlotHighlight(activeSlot.index);
-  }, [activeSlot, setSlotHighlight]);
-
-  const drawInsight = useMemo<MetricInsightModel | null>(() => {
-    if (!activeSlot) return null;
-
-    const expectedBreakDelta = activeSlot.isBreak ? '-1' : '0';
-    const expectedCallDelta = activeSlot.isBreak ? '-1' : '0';
-    const expectedVertexDrop = activeSlot.blendMode !== 'Normal' ? '-8%' : '-4%';
-
-    return {
-      id: `draw-${activeSlot.index}`,
-      title: t('drawCallInspector.insight.title', { index: activeSlot.index, attachment: activeSlot.attachmentName }),
-      subtitle: t('drawCallInspector.insight.subtitle', { atlasPage: activeSlot.atlasPage, blendMode: activeSlot.blendMode }),
-      sample: t('drawCallInspector.insight.sample', { slotName: activeSlot.slotName }),
-      metrics: [
-        {
-          id: 'draw-calls',
-          label: t('drawCallInspector.insight.metrics.drawCalls.label'),
-          value: `${snapshot.drawCallCount}`,
-          note: t('drawCallInspector.insight.metrics.drawCalls.note'),
-          tone: snapshot.drawCallCount > 8 ? 'warning' : 'positive',
-        },
-        {
-          id: 'page-breaks',
-          label: t('drawCallInspector.insight.metrics.pageBreaks.label'),
-          value: `${snapshot.pageBreaks}`,
-          note: activeSlot.isBreak
-            ? t('drawCallInspector.insight.metrics.pageBreaks.breakNote')
-            : t('drawCallInspector.insight.metrics.pageBreaks.stableNote'),
-          tone: activeSlot.isBreak ? 'danger' : 'positive',
-        },
-        {
-          id: 'blend-breaks',
-          label: t('drawCallInspector.insight.metrics.blendBreaks.label'),
-          value: `${snapshot.blendBreaks}`,
-          note: activeSlot.blendMode === 'Normal'
-            ? t('drawCallInspector.insight.metrics.blendBreaks.normalNote')
-            : t('drawCallInspector.insight.metrics.blendBreaks.riskNote'),
-          tone: activeSlot.blendMode === 'Normal' ? 'neutral' : 'warning',
-        },
-      ],
-      quickActions: [
-        {
-          id: 'filter-page',
-          label: t('drawCallInspector.insight.quickActions.filterPage.label', { page: activeSlot.atlasPage }),
-          impact: t('drawCallInspector.insight.quickActions.filterPage.impact'),
-          onRun: () => {
-            setAtlasPageFilter(activeSlot.atlasPage);
-          },
-        },
-        {
-          id: 'isolate-slot',
-          label: t('drawCallInspector.insight.quickActions.isolate.label'),
-          impact: t('drawCallInspector.insight.quickActions.isolate.impact'),
-          onRun: () => {
-            setSelectedSlotIndex(activeSlot.index);
-            setSlotHighlight(activeSlot.index);
-          },
-        },
-        {
-          id: 'atlas-suggest',
-          label: t('drawCallInspector.insight.quickActions.atlasSuggestion.label'),
-          impact: t('drawCallInspector.insight.quickActions.atlasSuggestion.impact'),
-          onRun: () => {
-            setRouteSelection({
-              sourceRoute: 'draw-call-inspector',
-              slotIndex: activeSlot.index,
-              slotName: activeSlot.slotName,
-              attachmentName: activeSlot.attachmentName,
-              atlasPage: activeSlot.atlasPage,
-              updatedAt: Date.now(),
-            });
-            void navigate({ to: '/tools/atlas-repack' });
-          },
-        },
-      ],
-      proofBlocks: [
-        {
-          id: 'calls',
-          label: t('ui.insights.proof.calls'),
-          delta: expectedCallDelta,
-          tone: activeSlot.isBreak ? 'positive' : 'neutral',
-        },
-        { id: 'verts', label: t('ui.insights.proof.verts'), delta: expectedVertexDrop, tone: 'info' },
-        {
-          id: 'breaks',
-          label: t('ui.insights.proof.breaks'),
-          delta: expectedBreakDelta,
-          tone: activeSlot.isBreak ? 'positive' : 'neutral',
-        },
-      ],
-      jumpChips: [
-        {
-          id: 'jump-draw',
-          label: t('ui.routeJumps.drawCalls'),
-          active: true,
-          onJump: () => {},
-        },
-        {
-          id: 'jump-mesh',
-          label: t('ui.routeJumps.mesh'),
-          onJump: () => {
-            void navigate({ to: '/tools/mesh-optimizer' });
-          },
-        },
-        {
-          id: 'jump-atlas',
-          label: t('ui.routeJumps.atlas'),
-          onJump: () => {
-            void navigate({ to: '/tools/atlas-repack' });
-          },
-        },
-      ],
-      explainer: {
-        what: t('drawCallInspector.insight.explainer.what', {
-          attachment: activeSlot.attachmentName,
-          atlasPage: activeSlot.atlasPage,
-          blendMode: activeSlot.blendMode,
-        }),
-        whyNow: activeSlot.isBreak
-          ? t('drawCallInspector.insight.explainer.whyNowBreak')
-          : t('drawCallInspector.insight.explainer.whyNowStable'),
-        howToFix: t('drawCallInspector.insight.explainer.howToFix'),
-        howToVerify: t('drawCallInspector.insight.explainer.howToVerify'),
-      },
-    };
-  }, [activeSlot, snapshot.drawCallCount, snapshot.pageBreaks, snapshot.blendBreaks, navigate, setRouteSelection, setSlotHighlight, t]);
 
   const handleLoadSelected = async () => {
     setIsLoadingSelected(true);
@@ -370,21 +197,19 @@ export function DrawCallInspectorRouteView() {
       <RouteHeaderCard
         title={t('dashboard.tools.drawCallInspector')}
         subtitle={t('drawCallInspector.subtitle')}
-      />
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={(id) => setSelectedAssetId(id)}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId: (id) => setSelectedAssetId(id),
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
-      <div className="dc-inspector-layout with-side-insight">
+      <div className="dc-inspector-layout">
         <div className="tool-panel dc-inspector-panel">
-          <RouteJumpStrip chips={jumpChips} selectionHint={selectionHint} />
 
           {lastLoadError && (
             <RouteStateCallout
@@ -446,12 +271,6 @@ export function DrawCallInspectorRouteView() {
                   <span className="dc-inspector-stat-label">{t('drawCallInspector.summary.blendBreaks')}</span>
                 </div>
               </div>
-
-              {activeSlot && (
-                <p className="subtle-text">
-                  {t('drawCallInspector.list.headers.attachment')}: <strong>{activeSlot.attachmentName}</strong>
-                </p>
-              )}
 
               {isPartialParse && (
                 <RouteStateCallout
@@ -559,13 +378,13 @@ export function DrawCallInspectorRouteView() {
 
         <div className="tool-canvas">
           <div
+            ref={canvasSlotRef}
             className="canvas-container"
             data-tour="canvas-dropzone"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <div ref={pixiContainerRef} className="pixi-host" />
             <div className="canvas-grid-overlay" />
             <CanvasStatsOverlay spineInstance={spineInstance} />
 
@@ -586,33 +405,7 @@ export function DrawCallInspectorRouteView() {
             {spineInstance && <AnimationControls spineInstance={spineInstance} />}
           </div>
         </div>
-
-        <aside className="tool-info-panel">
-          <div className="tool-info-scroll">
-            {drawInsight ? (
-              <MetricInsightPopout
-                insight={drawInsight}
-                isPinned={selectedSlotIndex !== null}
-                onPin={pinActiveInsight}
-                onUnpin={closeInsight}
-                onOpenExplainer={() => setShowExplainer(true)}
-                onRequestClose={closeInsight}
-              />
-            ) : (
-              <div className="tool-info-empty">
-                <h3>{t('drawCallInspector.infoPanel.emptyTitle')}</h3>
-                <p>{t('drawCallInspector.infoPanel.emptyDescription')}</p>
-              </div>
-            )}
-          </div>
-        </aside>
       </div>
-
-      <MetricExplainerModal
-        isOpen={showExplainer}
-        insight={drawInsight}
-        onClose={() => setShowExplainer(false)}
-      />
     </div>
   );
 }

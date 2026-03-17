@@ -30,10 +30,14 @@ export function useSpineLoader(app: Application | null) {
   const disposeSpine = useCallback((instance: Spine | null) => {
     if (!instance) return;
     try {
+      // Stop the ticker callback first to prevent stale onViewUpdate calls
+      // that corrupt the parent's renderGroup after removal.
+      instance.autoUpdate = false;
       instance.state.clearTracks();
       if (instance.parent) {
         instance.parent.removeChild(instance);
       }
+      instance.destroy();
     } catch (error) {
       console.warn('Failed to dispose previous spine instance', error);
     }

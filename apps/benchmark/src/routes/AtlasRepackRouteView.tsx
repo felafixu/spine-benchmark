@@ -1,20 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { AnimationControls } from '../components/AnimationControls';
 import { useWorkbench } from '../workbench/WorkbenchContext';
-import { ToolRouteControls } from '../components/ToolRouteControls';
 import { CanvasStatsOverlay } from '../components/CanvasStatsOverlay';
 import { useDrawCallInspector } from '../hooks/useDrawCallInspector';
 import { useAtlasData } from '../hooks/useAtlasData';
-import { reparentPixiCanvas } from '../hooks/usePixiApp';
 import { getStatColor } from '../core/utils/colorUtils';
 import { RouteHeaderCard } from '../components/RouteHeaderCard';
 import {
   MetricExplainerModal,
   MetricInsightModel,
   MetricInsightPopout,
-  RouteJumpStrip,
   RouteStateCallout,
 } from '../components/insights/MetricInsightTools';
 
@@ -35,6 +32,7 @@ export function AtlasRepackRouteView() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
+  const canvasSlotRef = useRef<HTMLDivElement>(null);
   const {
     spineInstance,
     urlLoadStatus,
@@ -43,7 +41,7 @@ export function AtlasRepackRouteView() {
     handleDrop,
     handleDragOver,
     handleDragLeave,
-    pixiContainerRef,
+    setCanvasInteractionElement,
     assets,
     selectedAssetId,
     setSelectedAssetId,
@@ -64,10 +62,11 @@ export function AtlasRepackRouteView() {
   const [pageFilter, setPageFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    if (pixiContainerRef.current) {
-      reparentPixiCanvas(pixiContainerRef.current);
+    if (canvasSlotRef.current) {
+      setCanvasInteractionElement(canvasSlotRef.current);
     }
-  }, [pixiContainerRef]);
+    return () => setCanvasInteractionElement(null);
+  }, [setCanvasInteractionElement]);
 
   const snapshot = useDrawCallInspector(spineInstance);
   const atlasData = useAtlasData(spineInstance);
@@ -173,35 +172,6 @@ export function AtlasRepackRouteView() {
     });
   };
 
-  const jumpChips = useMemo(() => [
-    {
-      id: 'draw-route',
-      label: t('ui.routeJumps.drawCalls'),
-      active: false,
-      onSelect: () => {
-        void navigate({ to: '/tools/draw-call-inspector' });
-      },
-    },
-    {
-      id: 'mesh-route',
-      label: t('ui.routeJumps.mesh'),
-      active: false,
-      onSelect: () => {
-        void navigate({ to: '/tools/mesh-optimizer' });
-      },
-    },
-    {
-      id: 'atlas-route',
-      label: t('ui.routeJumps.atlas'),
-      active: true,
-      onSelect: () => {},
-    },
-  ], [navigate, t]);
-
-  const selectionHint = routeSelection.attachmentName
-    ? t('ui.routeJumps.selectionRetainedNamed', { name: routeSelection.attachmentName })
-    : t('ui.routeJumps.selectionRetained');
-
   const atlasInsight = useMemo<MetricInsightModel | null>(() => {
     if (!activeRegion) return null;
     const pageShare = Math.max(1, Math.round((activeRegion.width * activeRegion.height) / (activeRegion.pageWidth * activeRegion.pageHeight) * 100));
@@ -244,65 +214,10 @@ export function AtlasRepackRouteView() {
           tone: 'neutral',
         },
       ],
-      quickActions: [
-        {
-          id: 'filter-problematic',
-          label: t('atlasRepack.insight.quickActions.filterProblematic.label'),
-          impact: t('atlasRepack.insight.quickActions.filterProblematic.impact'),
-          onRun: () => {
-            setShowOnlyProblematic(true);
-          },
-        },
-        {
-          id: 'isolate-page',
-          label: t('atlasRepack.insight.quickActions.isolatePage.label', { pageName: activeRegion.pageName }),
-          impact: t('atlasRepack.insight.quickActions.isolatePage.impact'),
-          onRun: () => {
-            setPageFilter(activeRegion.pageName);
-          },
-        },
-        {
-          id: 'jump-draw',
-          label: t('atlasRepack.insight.quickActions.jumpDrawCalls.label'),
-          impact: t('atlasRepack.insight.quickActions.jumpDrawCalls.impact'),
-          onRun: () => {
-            setRouteSelection((current) => ({
-              ...current,
-              sourceRoute: 'atlas-repack',
-              attachmentName: activeRegion.regionName,
-              atlasPage: activeRegion.pageName,
-              updatedAt: Date.now(),
-            }));
-            void navigate({ to: '/tools/draw-call-inspector' });
-          },
-        },
-      ],
       proofBlocks: [
         { id: 'proof-calls', label: t('ui.insights.proof.calls'), delta: expectedCallDelta, tone: 'positive' },
         { id: 'proof-verts', label: t('ui.insights.proof.verts'), delta: '-6%', tone: 'info' },
         { id: 'proof-breaks', label: t('ui.insights.proof.breaks'), delta: expectedBreakDelta, tone: 'positive' },
-      ],
-      jumpChips: [
-        {
-          id: 'jump-draw',
-          label: t('ui.routeJumps.drawCalls'),
-          onJump: () => {
-            void navigate({ to: '/tools/draw-call-inspector' });
-          },
-        },
-        {
-          id: 'jump-mesh',
-          label: t('ui.routeJumps.mesh'),
-          onJump: () => {
-            void navigate({ to: '/tools/mesh-optimizer' });
-          },
-        },
-        {
-          id: 'jump-atlas',
-          label: t('ui.routeJumps.atlas'),
-          active: true,
-          onJump: () => {},
-        },
       ],
       explainer: {
         what: t('atlasRepack.insight.explainer.what', {
@@ -312,8 +227,6 @@ export function AtlasRepackRouteView() {
         whyNow: activeRegion.isProblematic
           ? t('atlasRepack.insight.explainer.whyNowProblematic')
           : t('atlasRepack.insight.explainer.whyNowStable'),
-        howToFix: t('atlasRepack.insight.explainer.howToFix'),
-        howToVerify: t('atlasRepack.insight.explainer.howToVerify'),
       },
     };
   }, [activeRegion, navigate, setRouteSelection, t]);
@@ -339,21 +252,19 @@ export function AtlasRepackRouteView() {
       <RouteHeaderCard
         title={t('dashboard.tools.atlasRepack')}
         subtitle={t('atlasRepack.subtitle')}
-      />
-      <ToolRouteControls
-        minimal
-        assets={assets}
-        selectedAssetId={selectedAssetId}
-        setSelectedAssetId={(id) => setSelectedAssetId(id)}
-        onUploadBundle={uploadBundleFiles}
-        onPickAsset={handlePickAsset}
-        onLoadFromUrl={loadFromUrls}
-        isLoadingSelected={isLoadingSelected}
+        assetPicker={{
+          assets,
+          selectedAssetId,
+          setSelectedAssetId: (id) => setSelectedAssetId(id),
+          onUploadBundle: uploadBundleFiles,
+          onPickAsset: handlePickAsset,
+          onLoadFromUrl: loadFromUrls,
+          isLoadingSelected,
+        }}
       />
 
-      <div className="atlas-repack-layout with-side-insight">
+      <div className="atlas-repack-layout">
         <div className="tool-panel atlas-repack-panel">
-          <RouteJumpStrip chips={jumpChips} selectionHint={selectionHint} />
 
           {lastLoadError && (
             <RouteStateCallout
@@ -533,13 +444,13 @@ export function AtlasRepackRouteView() {
 
         <div className="tool-canvas">
           <div
+            ref={canvasSlotRef}
             className="canvas-container"
             data-tour="canvas-dropzone"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <div ref={pixiContainerRef} className="pixi-host" />
             <div className="canvas-grid-overlay" />
             <CanvasStatsOverlay spineInstance={spineInstance} />
 
@@ -560,44 +471,7 @@ export function AtlasRepackRouteView() {
             {spineInstance && <AnimationControls spineInstance={spineInstance} />}
           </div>
         </div>
-
-        <aside className="tool-info-panel">
-          <div className="tool-info-scroll">
-            {atlasInsight ? (
-              <MetricInsightPopout
-                insight={atlasInsight}
-                isPinned={selectedRegionId !== null}
-                onPin={() => {
-                  if (!activeRegion) return;
-                  setSelectedRegionId(activeRegion.id);
-                }}
-                onUnpin={() => {
-                  setSelectedRegionId(null);
-                  setHoveredRegionId(null);
-                  setShowExplainer(false);
-                }}
-                onOpenExplainer={() => setShowExplainer(true)}
-                onRequestClose={() => {
-                  setSelectedRegionId(null);
-                  setHoveredRegionId(null);
-                  setShowExplainer(false);
-                }}
-              />
-            ) : (
-              <div className="tool-info-empty">
-                <h3>{t('atlasRepack.infoPanel.emptyTitle')}</h3>
-                <p>{t('atlasRepack.infoPanel.emptyDescription')}</p>
-              </div>
-            )}
-          </div>
-        </aside>
       </div>
-
-      <MetricExplainerModal
-        isOpen={showExplainer}
-        insight={atlasInsight}
-        onClose={() => setShowExplainer(false)}
-      />
     </div>
   );
 }

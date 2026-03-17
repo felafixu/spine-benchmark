@@ -275,10 +275,14 @@
     "changeLanguageDescription": "Open language selection modal"
   },
   "appErrorBoundary": {
-    "title": "Something went wrong",
-    "description": "The app hit an unexpected error. Reload to continue.",
+    "title": "Something went wrong!",
+    "description": "The app hit an unexpected error. You can try again, reload, or report this as a bug.",
     "retry": "Try Again",
-    "reload": "Reload App"
+    "reload": "Reload App",
+    "reportBug": "Report Bug",
+    "showError": "Show Error Details",
+    "hideError": "Hide Error Details",
+    "unknownError": "An unknown error occurred"
   },
   "analysis": {
     "summary": {
@@ -799,7 +803,8 @@
       "drawCallInspector": "Draw Call Inspector",
       "atlasRepack": "Atlas Repack Advisor",
       "comparison": "Comparison",
-      "animationHeatmap": "Animation Heatmap"
+      "animationHeatmap": "Animation Heatmap",
+      "zSlice": "Z-Slice"
     },
     "actions": {
       "import": "Import",
@@ -1515,6 +1520,46 @@
       "pageBreaks": "PB: {{value}}",
       "blendBreaks": "BB: {{value}}",
       "visibleSlots": "Slots: {{value}}"
+    }
+  },
+  "zSlice": {
+    "subtitle": "Visualize skeleton layers in an exploded 3D view — split by draw call batch, bone depth, or custom grouping.",
+    "modes": {
+      "drawCall": "Draw Calls",
+      "treeDepth": "Tree Depth",
+      "customLock": "Custom Lock"
+    },
+    "controls": {
+      "depth": "Max depth",
+      "spacing": "Layer spacing"
+    },
+    "boneTree": {
+      "title": "Bone Hierarchy"
+    },
+    "layerList": {
+      "title": "Layers",
+      "drawCalls": "Draw Calls"
+    },
+    "timeline": {
+      "frame": "Frame",
+      "prerendering": "Prerendering slices...",
+      "ready": "Ready",
+      "scrub": "Scrub through animation frames"
+    },
+    "empty": {
+      "title": "Z-Slice Viewer",
+      "hint": "Load a Spine asset to explore its layers in an exploded 3D view."
+    },
+    "states": {
+      "loading": {
+        "title": "Loading...",
+        "description": "Preparing Spine skeleton for slicing."
+      },
+      "loadError": {
+        "title": "Load Error",
+        "retry": "Retry",
+        "dismiss": "Dismiss"
+      }
     }
   },
   "assets": {

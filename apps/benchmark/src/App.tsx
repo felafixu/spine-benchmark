@@ -22,6 +22,8 @@ import { tIndexed } from './utils/indexedMessage';
 import { FileProcessor } from './core/utils/fileProcessor';
 import { fetchRemoteAssetBundleFiles } from './utils/remoteAssetBundle';
 import {
+  ChevronLeft,
+  ChevronRight,
   FolderOpen,
   Gauge,
   Languages,
@@ -32,6 +34,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Square,
+  Layers,
 } from 'lucide-react';
 import benchmarkBrandIcon from '../assets/favicon.svg';
 import { GitHubIcon, TelegramIcon } from './components/Icons';
@@ -185,6 +188,7 @@ const App: React.FC = () => {
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('language');
   const [routeSelection, setRouteSelection] = useState<RouteSelectionState>(DEFAULT_ROUTE_SELECTION);
   const [lastLoadError, setLastLoadError] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const migratedLegacyBackgroundRef = useRef(false);
 
   const { addToast } = useToast();
@@ -212,7 +216,8 @@ const App: React.FC = () => {
     setHighlightedMeshSlot,
     setSlotHighlight,
     setMeshHighlightStyle,
-  } = useSpineApp(app);
+    setCanvasInteractionElement,
+  } = useSpineApp(app, pixiContainerRef);
 
   useEffect(() => {
     const normalizedBackground = normalizeHexColor(backgroundColor, DEFAULT_VIEWPORT_BACKGROUND);
@@ -742,7 +747,8 @@ const App: React.FC = () => {
     routeSelection,
     setRouteSelection,
     lastLoadError,
-    clearLastLoadError: () => setLastLoadError(null)
+    clearLastLoadError: () => setLastLoadError(null),
+    setCanvasInteractionElement
   }), [
     spineInstance,
     benchmarkData,
@@ -779,18 +785,27 @@ const App: React.FC = () => {
     meshHighlightColor,
     meshHighlightLineWidth,
     routeSelection,
-    lastLoadError
+    lastLoadError,
+    setCanvasInteractionElement
   ]);
 
   return (
     <WorkbenchProvider value={workbenchContextValue}>
-    <div className="app-shell">
-      <aside className="app-sidebar">
+    <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <aside className={`app-sidebar${sidebarCollapsed ? ' collapsed' : ''}`}>
         <div className="sidebar-header">
           <Link to="/tools/benchmark" className="sidebar-brand" aria-label={t('dashboard.tools.benchmark')}>
             <img src={benchmarkBrandIcon} alt="" className="sidebar-brand-icon" />
             <span className="sidebar-brand-text">{t('dashboard.tools.benchmark')}</span>
           </Link>
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
         </div>
 
         <section className="sidebar-section" data-tour="tool-switcher">
@@ -823,6 +838,10 @@ const App: React.FC = () => {
             <Link to="/tools/comparison" className={`tool-chip ${pathname.startsWith('/tools/comparison') ? 'active' : ''}`}>
               <span className="tool-chip-icon" aria-hidden="true"><Play className="icon" size={14} strokeWidth={2} /></span>
               <span className="tool-chip-label">{t('dashboard.tools.comparison')}</span>
+            </Link>
+            <Link to="/tools/z-slice" className={`tool-chip ${pathname.startsWith('/tools/z-slice') ? 'active' : ''}`}>
+              <span className="tool-chip-icon" aria-hidden="true"><Layers className="icon" size={14} strokeWidth={2} /></span>
+              <span className="tool-chip-label">{t('dashboard.tools.zSlice')}</span>
             </Link>
           </div>
         </section>
@@ -880,8 +899,22 @@ const App: React.FC = () => {
       </aside>
 
       <main className="workspace-main">
-        <Outlet />
+        <div ref={pixiContainerRef} className="pixi-host-persistent" />
+        <div className="workspace-content">
+          <Outlet />
+        </div>
       </main>
+
+      {sidebarCollapsed && (
+        <button
+          type="button"
+          className="sidebar-expand-fab"
+          onClick={() => setSidebarCollapsed(false)}
+          aria-label={t('dashboard.actions.expandSidebar')}
+        >
+          <ChevronRight size={16} />
+        </button>
+      )}
 
       {showWelcome && (
         <div className="welcome-backdrop">
@@ -944,7 +977,7 @@ const App: React.FC = () => {
       <CommandPalette />
 
       <VersionDisplay
-        appVersion="1.2.0"
+        appVersion="3.1.0"
         spineVersion="4.2.*"
       />
 
